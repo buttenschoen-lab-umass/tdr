@@ -77,6 +77,11 @@ class NonLocalGradient:
 
 
     def _init_weights(self):
+        """
+            This function computes the integration weights using a midpoint
+            composite using the formula presented in section 3.1.3 of Gerisch
+            2010
+        """
         OmegaM = lambda r : (-1. / (2. * self.R)) * (np.abs(r) <= self.R)
         OmegaP = lambda r : ( 1. / (2. * self.R)) * (np.abs(r) <= self.R)
 

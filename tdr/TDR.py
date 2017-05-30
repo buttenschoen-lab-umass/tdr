@@ -170,6 +170,7 @@ class TDR(object):
     def setup(self, patchId):
         self.ctx.data
 
+
     def _create_rhs(self, patchId):
         # dont need these in 1d
         #ystart = self.grd.get_start(patchId)
