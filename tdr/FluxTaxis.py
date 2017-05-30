@@ -58,6 +58,7 @@ class TaxisFlux(Flux):
         # TODO only implements depends u atm + linear function
         aij   = self.transAdh[i, j]
         if aij != 0.:
+            self.velNonZero = True
             bw = patch.boundaryWidth
             G  = patch.data.y[j, bw:-bw]
             a  = patch.nonLocalGradient(G).real

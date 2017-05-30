@@ -121,6 +121,7 @@ class TDR(object):
         if np.isnan(np.sum(y)):
             raise ValueError("Encountered NaN in TDR update")
 
+        # update everything
         self.update(t, y)
 
         # dev check!
