@@ -117,7 +117,14 @@ class TDR(object):
 
     """ This is the entry point for the integrator """
     def __call__(self, t, y):
+        # check that we dont have NaN values
+        if np.isnan(np.sum(y)):
+            raise ValueError("Encountered NaN in TDR update")
+
         self.update(t, y)
+
+        # dev check!
+        assert self.ydot is not None, ''
 
         # return the new ydot
         return self.ydot
@@ -158,32 +165,18 @@ class TDR(object):
     """ update between solver steps """
     def update(self, t, y):
         self.t = t
-        self.y = y
-        self.grid.update(t, y)
+        self.y = y.reshape(self.size, self.grid.gridsize)
+        self.grid.update(t, self.y)
 
-        # compute the fluxes
-        for name, flux in self.fluxTerms.items():
-            print('Applying %s.' % name)
-            self.grid.apply_flux(flux)
-
-
-    def setup(self, patchId):
-        self.ctx.data
-
-
-    def _create_rhs(self, patchId):
-        # dont need these in 1d
-        #ystart = self.grd.get_start(patchId)
-        #yend   = self.grd.get_start(patchId)
-
-        if self.tdr.haveReactionTerms:
+        if self.haveReactionTerms:
             assert False, 'not implemented'
             pass
 
-        for fluxTerm in self.fluxTerms.values():
-            fluxTerm(self.t, patchId)
+        # compute the fluxes
+        for name, flux in self.fluxTerms.items():
+            self.grid.apply_flux(flux)
 
-        self.ydot += self.ctx.data.ydot.reshape(self.ydot.size, 1)
+        self.ydot = self.grid.get_ydot()
 
 
 if __name__ == '__main__':

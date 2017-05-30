@@ -27,6 +27,11 @@ class Grid(object):
         # map to patches
         self.patches = {}
 
+        # patch start
+        self.ps = {}
+        # patch end
+        self.pe = {}
+
         # setup
         self._setup(grd, nonLocal)
 
@@ -63,6 +68,17 @@ class Grid(object):
         return self.pe[patchId]
 
 
+    def get_ydot(self):
+        ret = np.zeros((self.n * self.gridsize))
+        for patchId, patch in self.patches.items():
+            # TODO make more general
+            pstart = self.ps[patchId]
+            pend   = self.pe[patchId]
+            ret[pstart:pend] = patch.get_ydot().flatten()
+
+        return ret
+
+
     """ Implementation details """
     def _setup(self, grd, nonLocal):
         self._init_patches(grd, nonLocal)
@@ -82,6 +98,10 @@ class Grid(object):
                                     ngb             = ngb[i],
                                     boundaryWidth   = self.boundaryWidth,
                                     nonLocal        = nonLocal)
+
+            # TODO make more general!
+            self.ps[i] = 0
+            self.pe[i] = int(self.n * N[i])
 
 
     def _compute_size(self):

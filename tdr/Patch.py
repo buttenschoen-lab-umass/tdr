@@ -65,11 +65,6 @@ class Patch(object):
 
         self.xc = np.array(xcs)
 
-        # patch start
-        self.ps = {}
-        # patch end
-        self.pe = {}
-
         # setup
         self._setup(nonLocal, **kwargs)
 
@@ -94,6 +89,10 @@ class Patch(object):
 
     def cellCenters(self):
         return cartesian(self.xc)
+
+
+    def get_ydot(self):
+        return self.data.ydot
 
 
     """ Implementation details """

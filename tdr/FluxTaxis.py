@@ -29,7 +29,7 @@ class TaxisFlux(Flux):
             # FIXME works only in 1D atm!
 
             self.vij = np.zeros(1 + patch.size())
-            print('vij=',self.vij.shape)
+            #print('vij=',self.vij.shape)
 
             for j in range(self.n):
                 self.call(i, j, patch)
