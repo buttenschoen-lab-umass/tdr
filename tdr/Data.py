@@ -42,6 +42,7 @@ class Data(object):
         self.ngb                = ngb
         # data
         self.ydot               = None
+        # storage for y
         self.y                  = None
         self.t                  = None
         # data which is created by this class

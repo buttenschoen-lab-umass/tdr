@@ -66,6 +66,7 @@ class TaxisFlux(Flux):
 
             if np.isnan(np.sum(A)):
                 raise ValueError("Encountered NaN in non-local gradient calculation")
+
             self.vij += aij * A
 
 
@@ -102,6 +103,7 @@ class TaxisFlux(Flux):
         # Now compute HT
         patch.data.ydot[i, :] += (-1. / patch.step_size()) * \
                 (taxisApprox[1:] - taxisApprox[:-1])
+
 
 
 if __name__ == '__main__':
