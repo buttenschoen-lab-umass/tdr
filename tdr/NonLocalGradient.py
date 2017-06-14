@@ -50,7 +50,7 @@ class NonLocalGradient:
         self.N2 = N2
 
         self.R = R
-        self.NR = max(1000, np.round(self.N2 * self.R))
+        self.NR = max(1000, np.round(self.N2 * self.R).flatten())
 
         self.M = np.ceil(self.R / self.h).astype(int)
         self.lm = self.M
