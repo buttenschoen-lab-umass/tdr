@@ -1,3 +1,6 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+# Author: Andreas Buttenschoen
 import numpy as np
 
 # move to utils
@@ -13,6 +16,13 @@ def PeriodicGradient(u):
 
 # the vanLeer limiter
 VanLeer = lambda r : (r + np.abs(r)) / (1. + np.abs(r))
+
+
+def asarray(obj):
+    arr = np.asarray(obj)
+    if arr.size == 1:
+        arr = arr.reshape(1, 1)
+    return arr
 
 
 def apply_along_column(functions, arr):

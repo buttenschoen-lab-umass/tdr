@@ -11,7 +11,7 @@ from FluxDiffusion import DiffusionFlux
 from FluxTaxis import TaxisFlux
 from FluxReaction import ReactionFlux
 
-from utils import zeros
+from utils import zeros, asarray
 
 #
 # TODO: MySQL integration for data storage
@@ -138,16 +138,16 @@ class TDR(object):
         # number of patches
         nop = kwargs.pop('nop', 1)
         ngb = kwargs.pop('ngb', None)
-        dX  = kwargs.pop('dX',  None)
-        x0  = kwargs.pop('x0',  None)
-        N   = kwargs.pop('N',   None)
+        dX  = asarray(kwargs.pop('dX',  None))
+        x0  = asarray(kwargs.pop('x0',  None))
+        N   = asarray(kwargs.pop('N',   None))
 
         # load remaining kwargs and args
 
         # load transition matrices
-        trans    = kwargs.pop('transitionMatrix', zeros(self.size))
-        Adhtrans = kwargs.pop('AdhesionTransitionMatrix', zeros(self.size))
-        reaction = kwargs.pop('reactionTerms', np.full(self.size, None))
+        trans    = asarray(kwargs.pop('transitionMatrix', zeros(self.size)))
+        Adhtrans = asarray(kwargs.pop('AdhesionTransitionMatrix', zeros(self.size)))
+        reaction = asarray(kwargs.pop('reactionTerms', np.full(self.size, None)))
 
         # grid information
         grd = { 'nop' : nop, 'ngb' : ngb, 'dX' : dX, 'N' : N, 'x0' : x0}
