@@ -39,15 +39,15 @@ class Data(object):
         self.patchId            = patchId
         self.boundaryWidth      = boundaryWidth
         self.dX                 = dX
-        self.ngb                = ngb
+        self.boundary           = ngb
         # data
         self.ydot               = None
         # storage for y
         self.y                  = None
         self.t                  = None
+
         # data which is created by this class
         self._reset()
-
 
         # call to set face data
         self._compute = None
@@ -72,7 +72,7 @@ class Data(object):
         self.uDy                = None
         # averages on cell boundary
         self.uAvx               = None
-        self.uAvx               = None
+        self.uAvy               = None
         self.skalYT             = None
         self.skalYB             = None
 
@@ -94,25 +94,58 @@ class Data(object):
 
         # TODO look these up
         # deal with the boundaries 1D only atm
-        ngbPatchId = self.ngb['left']
+        lBoundary = self.boundary.left
 
-        nCb = np.arange(-bw, 0)
-        if ngbPatchId == 1: # periodic
+        if lBoundary.isPeriodic(): # periodic
+            # TODO do this better!
+            nCb = np.arange(-bw, 0)
             self.y[:, 0:bw] = self.y[:, nCb + nx + bw]
+
+        # at the moment this is really NoFlux bc
+        # TODO deal with this per equation!
+        elif lBoundary.isNeumann():
+            # This setups the boundary as follows: Here || denotes the boundary
+            # | y1 | y0 || y0 | y1 |
+            nCb = np.arange(bw, 0, -1) - 1
+            self.y[:, 0:bw] = self.y[:, nCb + bw]
         else:
             assert False, 'not implemented'
 
         # TODO look these up
-        ngbPatchId = self.ngb['right']
+        rBoundary = self.boundary.right
 
-        Cb = np.arange(0, bw)
-        if ngbPatchId == 1: # periodic BC
+        if rBoundary.isPeriodic(): # periodic BC
+            Cb = np.arange(0, bw)
             self.y[:, Cb + nx + bw] = self.y[:, bw + Cb]
+        # NoFlux boundary conditions only here!!!
+        elif rBoundary.isNeumann():
+            # This setups the boundary as follows: Here || denotes the boundary
+            # | yN-1 | yN || yN | yN-1 |
+            Cb  = np.arange(0, bw)
+            nCb = np.arange(1, -bw+1, -1)
+            self.y[:, Cb + nx + bw] = self.y[:, nCb + nx]
         else:
             assert False, 'Not implemented'
 
         # Finally reset
         self._reset()
+
+
+    """ Grow the domain """
+    def growRight(self):
+        pass
+
+
+    def shrinkRight(self):
+        pass
+
+
+    def growLeft(self):
+        pass
+
+
+    def shrinkLeft(self):
+        pass
 
 
     """ Compute Face Data """
@@ -127,8 +160,16 @@ class Data(object):
         self.ComputedFaceData = True
 
 
+    """ This computes uDx: the x-derivative approximation on right cell boundaries """
     def _compute_uDx(self):
         bw = self.boundaryWidth
+        #print('y_size:',self.y.size,' bw:',bw,' shape:', self.y.shape)
+        #print('1st_size:',self.y[:, bw:-bw+1].shape)
+        #print('2nd_size:',self.y[:, bw-1:-bw].shape)
+        #print(self.y)
+        #print('1st:', self.y[:, bw:-bw+1])
+        #print('2nd:', self.y[:, bw-1:-bw])
+
         self.uDx  = (1. / self.dX[0]) * \
                 (self.y[:, bw:-bw+1] - self.y[:, bw-1:-bw])
 

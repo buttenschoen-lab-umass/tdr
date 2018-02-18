@@ -9,6 +9,7 @@ from Grid import Grid
 # fluxes
 from FluxDiffusion import DiffusionFlux
 from FluxTaxis import TaxisFlux
+from FluxReaction import ReactionFlux
 
 from utils import zeros
 
@@ -146,6 +147,7 @@ class TDR(object):
         # load transition matrices
         trans    = kwargs.pop('transitionMatrix', zeros(self.size))
         Adhtrans = kwargs.pop('AdhesionTransitionMatrix', zeros(self.size))
+        reaction = kwargs.pop('reactionTerms', np.full(self.size, None))
 
         # grid information
         grd = { 'nop' : nop, 'ngb' : ngb, 'dX' : dX, 'N' : N, 'x0' : x0}
@@ -154,13 +156,17 @@ class TDR(object):
                          nonLocal = np.sum(np.abs(Adhtrans))!=0, **kwargs)
 
         # create basic flux types
-        dFlux = DiffusionFlux(self.size, self.dimensions, trans)
-        tFlux = TaxisFlux(self.size,     self.dimensions, trans, Adhtrans)
+        if np.any(trans != 0):
+            dFlux = DiffusionFlux(self.size, self.dimensions, trans)
+            self.fluxTerms['diffusion'] = dFlux
 
-        # TODO reaction
+        if np.any(Adhtrans != 0):
+            tFlux = TaxisFlux(self.size, self.dimensions, trans, Adhtrans)
+            self.fluxTerms['taxis'] = tFlux
 
-        self.fluxTerms['diffusion'] = dFlux
-        self.fluxTerms['taxis'] = tFlux
+        if np.any(reaction != None):
+            rFlux = ReactionFlux(self.size, self.dimensions, reaction)
+            self.fluxTerms['reaction'] = rFlux
 
 
     """ update between solver steps """

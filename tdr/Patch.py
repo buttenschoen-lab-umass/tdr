@@ -4,9 +4,9 @@
 from __future__ import print_function, division
 
 import numpy as np
-from utils import cartesian
-from Data import Data
-from NonLocalGradient import NonLocalGradient
+from .utils import cartesian
+from .Data import Data
+from .NonLocalGradient import NonLocalGradient
 
 
 class Patch(object):
@@ -48,6 +48,7 @@ class Patch(object):
         self.n   = n
         self.dim = N.size
         self.dX  = dX
+        self.ngb = kwargs.pop('ngb', None)
         self.shape = self.N * self.dX
 
         self.patchId = patchId
@@ -58,12 +59,11 @@ class Patch(object):
         # data for the patch
         self.data = None
 
-        # build cell centers
-        xcs = []
-        for i in range(N.size):
-            xcs.append((np.arange(1, N[i] + 1, 1) - 0.5) * dX[i])
+        # array holding the cell centers
+        self.xc = None
 
-        self.xc = np.array(xcs)
+        # build cell centers
+        self._setup_cell_centers()
 
         # setup
         self._setup(nonLocal, **kwargs)
@@ -73,6 +73,14 @@ class Patch(object):
     def update(self, t, y):
         self.data.set_values(t, y)
         self.data.compute_face_data()
+
+
+    def length(self):
+        return self.N * self.dX
+
+
+    def endPoints(self):
+        return self.x0 + np.array([0, self.length()])
 
 
     def apply_flux(self, flux):
@@ -95,13 +103,49 @@ class Patch(object):
         return self.data.ydot
 
 
+    # only for 1D so far
+    # TODO: optimize the recomp of cell centers!
+    def growPatchRight(self):
+        # easy simply add N
+        self.N += 1
+
+        # redo cell centers
+        self._setup_cell_centers()
+
+
+    def growPatchLeft(self):
+        # grow to the right but first move left most point
+        self.x0 -= self.dX
+        self.growPatchRight()
+
+
+    def shrinkPatchRight(self):
+        # reduce N by one
+        self.N -= 1
+        self._setup_cell_centers()
+
+
+    def shrinkPatchLeft(self):
+        # shift x0 to the right
+        self.x0 += self.dX
+        self.shrinkPatchRight()
+
+
     """ Implementation details """
+    def _setup_cell_centers(self):
+        xcs = []
+        for i in range(self.N.size):
+            xcs.append((np.arange(1, self.N[i] + 1, 1) - 0.5) * self.dX[i])
+
+        self.xc = np.array(xcs)
+
+
     def _setup(self, nonLocal, **kwargs):
         if nonLocal:
             self._setup_nonlocal()
 
         self.data = Data(self.n, self.patchId, self.dX, self.boundaryWidth,
-                         self.dim, **kwargs)
+                         self.dim, ngb = self.ngb)
 
 
     def _setup_nonlocal(self):

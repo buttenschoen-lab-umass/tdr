@@ -4,6 +4,7 @@
 
 import numpy as np
 from Patch import Patch
+from Boundary import DomainBoundary
 
 
 class Grid(object):
@@ -80,6 +81,15 @@ class Grid(object):
 
 
     """ Implementation details """
+    def __iter__(self):
+        for patch in self.patches.values():
+            yield patch
+
+
+    def __getitem__(self, key):
+        return self.patches[key]
+
+
     def _setup(self, grd, nonLocal):
         self._init_patches(grd, nonLocal)
         self._compute_size()
@@ -92,6 +102,9 @@ class Grid(object):
         dX  = grd['dX']
         N   = grd['N']
         x0  = grd['x0']
+
+        if nop == 1 and isinstance(ngb, DomainBoundary):
+            ngb = [ngb]
 
         for i in range(nop):
             self.patches[i] = Patch(self.n, i + 1, x0[i], dX[i], N[i],
