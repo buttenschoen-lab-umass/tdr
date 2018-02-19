@@ -1,7 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 
 import numpy as np
+
+# domain support
+from Domain import Interval
 
 # grid
 from Grid import Grid
@@ -137,12 +141,11 @@ class TDR(object):
         # Load Grid data and create Grid
         # number of patches
         nop = kwargs.pop('nop', 1)
-        ngb = kwargs.pop('ngb', None)
-        dX  = asarray(kwargs.pop('dX',  None))
-        x0  = asarray(kwargs.pop('x0',  None))
-        N   = asarray(kwargs.pop('N',   None))
-
-        # load remaining kwargs and args
+        dom = kwargs.pop('domain', Interval(0, 1))
+        ngb = np.asarray(dom.bd).reshape(1)
+        dX  = asarray(dom.dX)
+        x0  = asarray(dom.x0)
+        N   = asarray(dom.N, np.int)
 
         # load transition matrices
         trans    = asarray(kwargs.pop('transitionMatrix', zeros(self.size)))

@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Author: Andreas Buttenschoen
+from __future__ import print_function
 
 import numpy as np
 from Patch import Patch

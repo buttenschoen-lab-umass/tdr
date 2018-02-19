@@ -4,60 +4,14 @@
 #
 
 from __future__ import print_function
-from numbers import Number
 import numpy as np
-
-"""
-    This class implements easy setup of boundary conditions
-"""
-
-""" 1D only at the moment """
-class DomainBoundary(object):
-    def __init__(self, left, right):
-        self.left  = left
-        self.right = right
-
-        # allow easy lookup
-        setattr(self, 'left', self.left)
-        setattr(self, 'right', self.right)
-        self.list = [self.left, self.right]
-
-
-    """ internal methods """
-    def __getitem__(self, key):
-        if key == 0:
-            return self.left
-        elif key == 1:
-            return self.right
-        else:
-            assert False, 'DomainBoundary unknown key'
-
-
-    def __iter__(self):
-        for bd in self.list:
-            yield bd
-
-
-    """ public methods """
-    # TODO: atm we can't deal with different boundary conditions on either side
-    def isPeriodic(self):
-        return self.left.isPeriodic() and self.right.isPeriodic()
-
-
-    def isNeumann(self):
-        return self.left.isNeumann() and self.right.isNeumann()
-
-
-    def isDirichlet(self):
-        return self.left.isDirichlet() and self.right.isDirichlet()
-
 
 """
     Keeps information that are important about choosing a type of boundary
     condition for a face.
 """
 class Boundary(object):
-    def __init__(self, name = "Boundary", oNormal = np.array([1.])):
+    def __init__(self, name = "Boundary", oNormal = 1.):
         self.name = name
 
         # TODO: is there a better way to do this?
@@ -66,10 +20,8 @@ class Boundary(object):
         # default value for value and oNormal
         self.value = 1.
 
-        if isinstance(oNormal, Number):
-            self.oNormal = np.array([oNormal])
-        else:
-            self.oNormal = oNormal
+        # the output normal
+        self.oNormal = np.asarray(oNormal)
 
         # setup
         self._setup()
@@ -113,15 +65,57 @@ class Periodic(Boundary):
 
 
 class Neumann(Boundary):
-    def __init__(self, value, oNormal):
+    def __init__(self, oNormal, value = 0.):
         super(Neumann, self).__init__(name = "Neumann", oNormal = oNormal)
         self.value = value
 
 
 class Dirichlet(Boundary):
-    def __init__(self, value, oNormal):
+    def __init__(self, oNormal, value = 0.):
         super(Dirichlet, self).__init__(name = "Dirichlet", oNormal = oNormal)
         self.value = value
+
+
+"""
+    This class implements easy setup of boundary conditions
+"""
+
+""" 1D only at the moment """
+class DomainBoundary(object):
+    def __init__(self, *args, **kwargs):
+        self.left  = kwargs.pop('left',  Neumann(-1.))
+        self.right = kwargs.pop('right', Neumann( 1.))
+
+        # allow easy lookup
+        setattr(self, 'left', self.left)
+        setattr(self, 'right', self.right)
+
+        # easy indexing
+        self.lookup = {0 : self.left, 1 : self.right}
+
+
+    """ internal methods """
+    def __getitem__(self, key):
+        return self.lookup[key]
+
+
+    def __iter__(self):
+        for bd in self.lookup.values():
+            yield bd
+
+
+    """ public methods """
+    # TODO: atm we can't deal with different boundary conditions on either side
+    def isPeriodic(self):
+        return self.left.isPeriodic() and self.right.isPeriodic()
+
+
+    def isNeumann(self):
+        return self.left.isNeumann() and self.right.isNeumann()
+
+
+    def isDirichlet(self):
+        return self.left.isDirichlet() and self.right.isDirichlet()
 
 
 if __name__ == '__main__':

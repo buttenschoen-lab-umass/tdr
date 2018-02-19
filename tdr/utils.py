@@ -18,10 +18,20 @@ def PeriodicGradient(u):
 VanLeer = lambda r : (r + np.abs(r)) / (1. + np.abs(r))
 
 
-def asarray(obj):
-    arr = np.asarray(obj)
+def asarray(obj, dtype=None):
+    if dtype is not None:
+        arr = np.asarray(obj, dtype=dtype)
+    else:
+        arr = np.asarray(obj)
+
     if arr.size == 1:
         arr = arr.reshape(1, 1)
+    return arr
+
+
+def repeat_array(arr, targetLength):
+    if targetLength > 1 and arr.size == 1:
+        arr = np.repeat(arr, targetLength)
     return arr
 
 

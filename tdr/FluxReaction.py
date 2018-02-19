@@ -14,13 +14,14 @@ class ReactionFlux(Flux):
 
 
     """ i: is the number of PDE """
-    def __call__(self, patchData):
+    def __call__(self, patch):
         # Compute reaction term for each of the PDEs
         # It seems easier to do this all at once, since these things may depend
         # on each other.
-        Hr = apply_along_column(self.trans, patchData.data.y)
+        Hr = apply_along_column(self.trans, patch.data.y)
 
-        patchData.data.ydot += Hr
+        # cut of the boundary width
+        patch.data.ydot += Hr[:, patch.bW:-patch.bW]
 
         #for i in range(self.n):
         #    self.call(i, patchData)

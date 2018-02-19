@@ -32,7 +32,7 @@ class Data(object):
         TODO
 
     """
-    def __init__(self, n, patchId, dX, boundaryWidth, dimensions, ngb=None):
+    def __init__(self, n, patchId, dX, boundaryWidth, dimensions, ngb):
         # Important numbers
         self.n                  = n
         self.dim                = dimensions
