@@ -20,9 +20,17 @@ class Interval(object):
         self.xf                 = b
         self.dX                 = asarray(self.h)
 
+        # for plotting
+        self.y0                 = kwargs.pop('y0', 0.)
+        self.yf                 = kwargs.pop('yf', 10.)
+
         self.bd                 = kwargs.pop('bd', DomainBoundary())
 
 
     def xs(self):
         return np.linspace(self.x0, self.xf - self.h, self.N)
+
+
+    def box(self):
+        return [self.x0, self.xf, self.y0, self.yf]
 
