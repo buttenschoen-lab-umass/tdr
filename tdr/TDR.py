@@ -80,6 +80,7 @@ class TDR(object):
         self.size           = noPDEs
         self.dimensions     = dimensions
 
+        # for easy checking of requirements
         self.haveReactionTerms      = False
         self.haveDiffusionTerms     = False
         self.haveTaxisTerms         = True
@@ -90,6 +91,9 @@ class TDR(object):
 
         # context access remove
         self.ctx = None
+
+        # store domain
+        self.dom = None
 
         # grid
         self.grid = None
@@ -147,6 +151,9 @@ class TDR(object):
         x0  = asarray(dom.x0)
         N   = asarray(dom.N, np.int)
 
+        # save domain
+        self.dom = dom
+
         # load transition matrices
         trans    = asarray(kwargs.pop('transitionMatrix', zeros(self.size)))
         Adhtrans = asarray(kwargs.pop('AdhesionTransitionMatrix', zeros(self.size)))
@@ -175,18 +182,19 @@ class TDR(object):
     """ update between solver steps """
     def update(self, t, y):
         self.t = t
-        self.y = y.reshape(self.size, self.grid.gridsize)
+        self.y = self.reshape(y)
         self.grid.update(t, self.y)
-
-        if self.haveReactionTerms:
-            assert False, 'not implemented'
-            pass
 
         # compute the fluxes
         for name, flux in self.fluxTerms.items():
             self.grid.apply_flux(flux)
 
         self.ydot = self.grid.get_ydot()
+
+
+    """ reshape the data """
+    def reshape(self, y):
+        return y.reshape(self.size, self.grid.gridsize)
 
 
 if __name__ == '__main__':
