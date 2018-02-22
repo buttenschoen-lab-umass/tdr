@@ -81,6 +81,11 @@ class Grid(object):
         return ret
 
 
+    def elongate(self, where, direction):
+        # TODO fill in
+        pass
+
+
     """ Implementation details """
     def __iter__(self):
         for patch in self.patches.values():

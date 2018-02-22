@@ -34,3 +34,10 @@ class Interval(object):
     def box(self):
         return [self.x0, self.xf, self.y0, self.yf]
 
+
+    def elongate(self, where, direction, h = 0.1):
+        if where == 0:
+            self.x0 += direction * h
+        else:
+            self.xf += direction * h
+

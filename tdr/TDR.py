@@ -197,6 +197,13 @@ class TDR(object):
         return y.reshape(self.size, self.grid.gridsize)
 
 
+    """ Resize the domain """
+    def resizeDomain(self):
+        # change domain object
+        # need to update grid
+        pass
+
+
 if __name__ == '__main__':
     print('Testing TDR')
     # create data object

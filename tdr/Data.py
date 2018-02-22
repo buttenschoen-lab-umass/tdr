@@ -132,19 +132,7 @@ class Data(object):
 
 
     """ Grow the domain """
-    def growRight(self):
-        pass
-
-
-    def shrinkRight(self):
-        pass
-
-
-    def growLeft(self):
-        pass
-
-
-    def shrinkLeft(self):
+    def elongate(self, where, direction, h = 0.1):
         pass
 
 
