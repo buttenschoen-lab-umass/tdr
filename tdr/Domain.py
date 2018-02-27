@@ -3,14 +3,8 @@
 # Author: Andreas Buttenschoen
 
 import numpy as np
-from utils import asarray
+from utils import asarray, round_to_nearest_fraction
 from Boundary import DomainBoundary
-
-def round_to_nearest_fraction(number, n = 4):
-    fraction = 2**n
-    val = number * fraction
-    val = np.ceil(val)
-    return val / fraction
 
 
 """
@@ -25,6 +19,7 @@ class Interval(object):
         # Length parameters
         self.n                  = kwargs.pop('n', 5)
         self.cellsPerUnitLength = kwargs.pop('cellsPerUnitLength', 2**self.n)
+        self.h                  = 1. / self.cellsPerUnitLength
 
         # for plotting
         self.y0                 = kwargs.pop('y0', 0.)
@@ -39,7 +34,6 @@ class Interval(object):
     """ Internal methods """
     def _reset(self):
         self.L                  = np.abs(self.xf - self.x0)
-        self.h                  = 1. / self.cellsPerUnitLength
         self.N                  = self.L * self.cellsPerUnitLength
         self.dX                 = asarray(self.h)
 

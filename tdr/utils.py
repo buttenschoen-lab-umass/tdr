@@ -122,3 +122,8 @@ def zeros(size):
     return np.zeros(size*size).reshape(size, size)
 
 
+def round_to_nearest_fraction(number, n = 4):
+    fraction = 2**n
+    val = number * fraction
+    val = np.ceil(val)
+    return val / fraction
