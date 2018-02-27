@@ -11,14 +11,13 @@ from Boundary import DomainBoundary
 """
 class Interval(object):
     def __init__(self, a, b, *args, **kwargs):
-        self.L                  = np.abs(b - a)
-        self.n                  = kwargs.pop('n', 5)
-        self.cellsPerUnitLength = kwargs.pop('cellsPerUnitLength', 2**self.n)
-        self.h                  = 1. / self.cellsPerUnitLength
-        self.N                  = self.L * self.cellsPerUnitLength
+        # set the basic parameters
         self.x0                 = a
         self.xf                 = b
-        self.dX                 = asarray(self.h)
+
+        # Length parameters
+        self.n                  = kwargs.pop('n', 5)
+        self.cellsPerUnitLength = kwargs.pop('cellsPerUnitLength', 2**self.n)
 
         # for plotting
         self.y0                 = kwargs.pop('y0', 0.)
@@ -26,7 +25,19 @@ class Interval(object):
 
         self.bd                 = kwargs.pop('bd', DomainBoundary())
 
+        # call reset
+        self._reset()
 
+
+    """ Internal methods """
+    def _reset(self):
+        self.L                  = np.abs(self.xf - self.x0)
+        self.h                  = 1. / self.cellsPerUnitLength
+        self.N                  = self.L * self.cellsPerUnitLength
+        self.dX                 = asarray(self.h)
+
+
+    """ Public methods """
     def xs(self):
         return np.linspace(self.x0, self.xf - self.h, self.N)
 
@@ -35,9 +46,22 @@ class Interval(object):
         return [self.x0, self.xf, self.y0, self.yf]
 
 
-    def elongate(self, where, direction, h = 0.1):
-        if where == 0:
-            self.x0 += direction * h
-        else:
-            self.xf += direction * h
+    def resize(self, arr):
+        self.x0 = arr[0]
+        self.xf = arr[1]
+        self._reset()
+
+
+    def size(self):
+        # TODO make faster!
+        return self.xs().size
+
+
+    def __repr__(self):
+        return 'Interval(%.2f, %.2f, %d)' % (self.x0, self.xf, self.size())
+
+
+    def __str__(self):
+        return self.__repr__()
+
 
