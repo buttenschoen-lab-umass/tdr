@@ -6,6 +6,13 @@ import numpy as np
 from utils import asarray
 from Boundary import DomainBoundary
 
+def round_to_nearest_fraction(number, n = 4):
+    fraction = 2**n
+    val = number * fraction
+    val = np.ceil(val)
+    return val / fraction
+
+
 """
     1-D only for the moment.
 """
@@ -47,18 +54,19 @@ class Interval(object):
 
 
     def resize(self, arr):
-        self.x0 = arr[0]
-        self.xf = arr[1]
+        self.x0 = round_to_nearest_fraction(arr[0], self.n)
+        self.xf = round_to_nearest_fraction(arr[1], self.n)
+        N_old = self.N
         self._reset()
+        return N_old
 
 
     def size(self):
-        # TODO make faster!
-        return self.xs().size
+        return int(self.N)
 
 
     def __repr__(self):
-        return 'Interval(%.2f, %.2f, %d)' % (self.x0, self.xf, self.size())
+        return 'Interval(%.2f, %.2f, %d)' % (self.x0, self.xf, self.N)
 
 
     def __str__(self):
