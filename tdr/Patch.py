@@ -136,7 +136,7 @@ class Patch(object):
     def _setup_cell_centers(self):
         xcs = []
         for i in range(self.N.size):
-            print('i=',i,' N:', self.N, ' dX:', self.dX)
+            #print('i=',i,' N:', self.N, ' dX:', self.dX)
             xcs.append((np.arange(1, self.N[i] + 1, 1) - 0.5) * self.dX[i])
 
         self.xc = np.array(xcs)
