@@ -10,6 +10,6 @@ def getHillFunction(n):
 
 
 def getStepFunction(x, step_point = 0.1, hfactor = 2.):
-    return np.piecewise(x, [x < step_point, x >= step_point], [hfactor, 1.])
+    return np.piecewise(x, [x < step_point, x >= step_point], [hfactor, .1])
 
 
