@@ -17,7 +17,7 @@ class Interval(object):
         self.xf                 = b
 
         # Length parameters
-        self.n                  = kwargs.pop('n', 5)
+        self.n                  = kwargs.pop('n', 8)
         self.cellsPerUnitLength = kwargs.pop('cellsPerUnitLength', 2**self.n)
         self.h                  = 1. / self.cellsPerUnitLength
 
