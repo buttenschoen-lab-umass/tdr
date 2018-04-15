@@ -23,8 +23,10 @@ class Flux(object):
     def _setup(self):
         if self.dim == 1:
             pass
+        elif self.dim == 2:
+            pass
         else:
-            assert False, 'At the moment we only support 1D simulations.'
+            assert False, 'At the moment we only support 1D and 2D simulations.'
 
 
     def __call__(self, patch):

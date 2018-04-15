@@ -25,6 +25,35 @@ class Data(object):
         dimensions      : int
                           Spatial dimensions
 
+        Data Layout
+        ----------
+        Indexing works like this y[pdeIdx, xCoord, yCoord]
+        Note that if we print a 2D numpy array it looks like this
+
+        (x0, y0) ----------------------------------------- (x0, y1)
+           |                                                  |
+           |                                                  |
+           |                                                  |
+           |                                                  |
+           |                                                  |
+           |                                                  |
+           |                                                  |
+           |                                                  |
+        (x1, y0) ----------------------------------------- (x1, y1)
+
+        The access indices looks like this:
+
+        (0, 0) ----------------------------------------- (0, Ny)
+          |                                                |
+          |                                                |
+          |                                                |
+          |                                                |
+          |                                                |
+          |                                                |
+          |                                                |
+          |                                                |
+        (Nx, 0) --------------------------------------- (Nx, Ny)
+
 
         Attributes
         ----------
@@ -58,10 +87,13 @@ class Data(object):
 
     """ setup function """
     def _setup(self):
+        #assert self.boundary is not None, 'Boundary cannot be None!'
         if self.dim == 1:
             self._compute = self._compute_face_data_1d
+        elif self.dim == 2:
+            self._compute = self._compute_face_data_2d
         else:
-            assert False, 'not implemented'
+            assert False, 'Compute face data not implemented for %dd' % self.dim
 
 
     """ reset """
@@ -76,9 +108,16 @@ class Data(object):
         self.skalYT             = None
         self.skalYB             = None
 
+        if self.dim == 1:
+            self.set_values = self.set_values_1d
+        elif self.dim == 2:
+            self.set_values = self.set_values_2d
+        else:
+            assert False, 'Compute face data not implemented for %dd' % self.dim
+
 
     """ Set values """
-    def set_values(self, t, y):
+    def set_values_1d(self, t, y):
         self.t              = t
         bw                  = self.boundaryWidth
         nx                  = y.shape[1]
@@ -131,6 +170,36 @@ class Data(object):
         self._reset()
 
 
+    """ Set values """
+    def set_values_2d(self, t, y):
+        self.t              = t
+        bw                  = self.boundaryWidth
+        nx                  = y.shape[1]
+        ny                  = y.shape[2]
+        self.y              = np.empty((self.n, nx + 2 * bw, ny + 2 * bw))
+        self.y[:]           = np.NaN
+        if bw > 0:
+            self.y[:, bw:-bw, bw:-bw]   = y
+        else:
+            self.y[:] = y
+
+        # reset ydot
+        self.ydot           = np.zeros((self.n, nx, ny))
+
+        # let's define periodic boundary conditions by default for the begining
+        # x-boundary
+        nCb = np.arange(-bw, 0)
+        self.y[:, 0:bw, bw:-bw] = self.y[:, nCb + nx + bw, bw:-bw]
+        self.y[:, bw:-bw, 0:bw] = self.y[:, bw:-bw, nCb + nx + bw]
+
+        Cb = np.arange(0, bw)
+        self.y[:, Cb + nx + bw, bw:-bw] = self.y[:, bw + Cb, bw:-bw]
+        self.y[:, bw:-bw, Cb + nx + bw] = self.y[:, bw:-bw, bw + Cb]
+
+        # Finally reset
+        self._reset()
+
+
     """ Grow the domain """
     def elongate(self, where, direction, h = 0.1):
         pass
@@ -141,16 +210,27 @@ class Data(object):
         self._compute()
 
 
-    """ Function compute uDx, uDy, uAvx, uAvy, skalYT, skalYB """
+    """ Function compute uDx, uAvx, skalYT, skalYB """
     def _compute_face_data_1d(self):
-        self._compute_uDx()
-        self._compute_uAvx()
+        self._compute_uDx_1d()
+        self._compute_uAvx_1d()
+        self.ComputedFaceData = True
+
+
+    """ Function compute uDx, uDy, uAvx, uAvy, skalYT, skalYB """
+    def _compute_face_data_2d(self):
+        self._compute_uDx_2d()
+        self._compute_uDy_2d()
+        self._compute_uAvx_2d()
+        self._compute_uAvy_2d()
         self.ComputedFaceData = True
 
 
     """ This computes uDx: the x-derivative approximation on right cell boundaries """
-    def _compute_uDx(self):
+    def _compute_uDx_1d(self):
         bw = self.boundaryWidth
+        assert bw == 2, 'BoundaryWidth must be at least 2 for fluxes!'
+
         #print('y_size:',self.y.size,' bw:',bw,' shape:', self.y.shape)
         #print('1st_size:',self.y[:, bw:-bw+1].shape)
         #print('2nd_size:',self.y[:, bw-1:-bw].shape)
@@ -162,9 +242,53 @@ class Data(object):
                 (self.y[:, bw:-bw+1] - self.y[:, bw-1:-bw])
 
 
-    def _compute_uAvx(self):
+    def _compute_uAvx_1d(self):
         bw = self.boundaryWidth
         self.uAvx = 0.5 * (self.y[:, bw:-bw+1] + self.y[:, bw-1:-bw])
+
+
+    """ Functions that compute required data in 2D """
+    def _compute_uDx_2d(self):
+        bw = self.boundaryWidth
+        assert bw == 2, 'BoundaryWidth must be at least 2 for fluxes!'
+
+        #print('y_size:',self.y.size,' bw:',bw,' shape:', self.y.shape)
+        #print(self.y)
+        #print('y_size:',self.y.size,' bw:',bw,' shape:', self.y[:, bw:-bw, bw:-bw])
+        #print('y_size:',self.y.size,' bw:',bw,' shape:', self.y[:, bw:-bw, bw:-bw].shape)
+        #print('1st_size:',self.y[:, bw:-bw+1, bw:-bw].shape)
+        #print('2nd_size:',self.y[:, bw-1:-bw, bw:-bw].shape)
+
+        #print('1st_size:')
+        #print(self.y[:, bw:-bw+1, bw:-bw])
+        #print('2nd_size:')
+        #print(self.y[:, bw-1:-bw, bw:-bw])
+        #print('x-axis:')
+        #print(self.y[:, bw, bw:-bw])
+        #print('First coordinate:', self.y[0, bw, bw])
+        #print('Secon coordinate:', self.y[0, bw, bw+1])
+        #print('Third coordinate:', self.y[0, bw, bw+2])
+
+        self.uDx  = (1. / self.dX[0]) * \
+                (self.y[:, bw:-bw+1, bw:-bw] - self.y[:, bw-1:-bw, bw:-bw])
+
+
+    def _compute_uDy_2d(self):
+        bw = self.boundaryWidth
+        assert bw == 2, 'BoundaryWidth must be at least 2 for fluxes!'
+
+        self.uDy  = (1. / self.dX[1]) * \
+                (self.y[:, bw:-bw, bw:-bw+1] - self.y[:, bw:-bw, bw-1:-bw])
+
+
+    def _compute_uAvx_2d(self):
+        bw = self.boundaryWidth
+        self.uAvx = 0.5 * (self.y[:, bw:-bw+1, bw:-bw] + self.y[:, bw-1:-bw, bw:-bw])
+
+
+    def _compute_uAvy_2d(self):
+        bw = self.boundaryWidth
+        self.uAvy = 0.5 * (self.y[:, bw:-bw, bw:-bw+1] + self.y[:, bw:-bw, bw-1:-bw])
 
 
 if __name__ == '__main__':

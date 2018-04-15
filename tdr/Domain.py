@@ -16,6 +16,9 @@ class Interval(object):
         self.x0                 = a
         self.xf                 = b
 
+        # number of patches -> in 1D always one
+        self.nop                = 1
+
         # Length parameters
         self.n                  = kwargs.pop('n', 8)
         self.cellsPerUnitLength = kwargs.pop('cellsPerUnitLength', 2**self.n)

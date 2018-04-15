@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Author: Andreas Buttenschoen
 
-from Flux import Flux
+from .Flux import Flux
 
 
 class DiffusionFlux(Flux):
@@ -16,21 +16,36 @@ class DiffusionFlux(Flux):
     """ i: is the number of PDE """
     def __call__(self, patchData):
         for i in range(self.n):
+            self._switchBoardNew(i, patchData)
             # Dont seem to needs this any longer!
-            self._flux_1d_periodic(i, patchData)
+            # self._flux_1d_periodic(i, patchData)
 
 
     def _switchBoard(self, i, patchData):
         # TODO optimize?
         bd = patchData.ngb
-        if bd.isPeriodic():
-            self._flux_1d_periodic(i, patchData)
-        elif bd.isNeumann():
-            self._flux_1d_neumann(i, patchData)
-        elif bd.isDirichlet():
-            self._flux_1d_dirichlet(i, patchData)
+        if self.dim == 1:
+            if bd.isPeriodic():
+                self._flux_1d_periodic(i, patchData)
+            elif bd.isNeumann():
+                self._flux_1d_neumann(i, patchData)
+            elif bd.isDirichlet():
+                self._flux_1d_dirichlet(i, patchData)
+            else:
+                assert False, 'Unknown boundary condition!'
+        elif self.dim == 2:
+            self._flux_2d_periodic(i, patchData)
         else:
-            assert False, 'Unknown boundary condition!'
+            assert False, 'Not implemented for dimensions larger than 2!'
+
+
+    def _switchBoardNew(self, i, patchData):
+        if self.dim == 1:
+            self._flux_1d_periodic(i, patchData)
+        elif self.dim == 2:
+            self._flux_2d_periodic(i, patchData)
+        else:
+            assert False, 'Not implemented for dimensions larger than 2!'
 
 
     """ Computational details: The functions compute H_D(U, i). """
@@ -41,6 +56,17 @@ class DiffusionFlux(Flux):
 
         # set ydot in data
         patch.data.ydot[i, :] += Hd
+
+
+    def _flux_2d_periodic(self, i, patch):
+        pii   = self.trans[i, i]
+        uDx   = patch.data.uDx[i, :]
+        uDy   = patch.data.uDy[i, :]
+        xdiff = (pii / patch.step_size()[0]) * (uDx[1:, :] - uDx[:-1, :])
+        ydiff = (pii / patch.step_size()[1]) * (uDy[:, 1:] - uDy[:, :-1])
+
+        # set ydot in data
+        patch.data.ydot[i, :, :] += xdiff + ydiff
 
 
     def _flux_1d_neumann(self, i, patch):

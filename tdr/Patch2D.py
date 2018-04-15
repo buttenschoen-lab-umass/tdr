@@ -7,10 +7,9 @@ import numpy as np
 from .utils import cartesian
 from .Data import Data
 from .NonLocalGradient import NonLocalGradient
-from .Boundary import DomainBoundary
 
 
-class Patch(object):
+class Patch2D(object):
     """
         A patch of a domain.
 
@@ -35,6 +34,14 @@ class Patch(object):
         **kwargs        : dict
                         These are forwarded to Data
 
+        Data Layout
+        -----------
+        1) First the row of grid cells with the smallest x-values, then the row
+           just above.
+
+        2) Within each row of grid values start with the ones with the smallest
+           y-values.
+
 
         Attributes
         ----------
@@ -49,7 +56,7 @@ class Patch(object):
         self.n   = n
         self.dim = N.size
         self.dX  = dX
-        self.ngb = kwargs.pop('ngb', DomainBoundary())
+        self.ngb = kwargs.pop('ngb', None)
         self.shape = self.N * self.dX
 
         self.patchId = patchId
@@ -82,7 +89,7 @@ class Patch(object):
 
 
     def endPoints(self):
-        return self.x0 + np.array([0, self.length()])
+        return self.x0 + self.length()
 
 
     def apply_flux(self, flux):
@@ -90,7 +97,7 @@ class Patch(object):
 
 
     def step_size(self):
-        return self.dX[0]
+        return self.dX
 
 
     def size(self):
@@ -103,34 +110,6 @@ class Patch(object):
 
     def get_ydot(self):
         return self.data.ydot
-
-
-    # only for 1D so far
-    # TODO: optimize the recomp of cell centers!
-    def growPatchRight(self):
-        # easy simply add N
-        self.N += 1
-
-        # redo cell centers
-        self._setup_cell_centers()
-
-
-    def growPatchLeft(self):
-        # grow to the right but first move left most point
-        self.x0 -= self.dX
-        self.growPatchRight()
-
-
-    def shrinkPatchRight(self):
-        # reduce N by one
-        self.N -= 1
-        self._setup_cell_centers()
-
-
-    def shrinkPatchLeft(self):
-        # shift x0 to the right
-        self.x0 += self.dX
-        self.shrinkPatchRight()
 
 
     """ Implementation details """
@@ -155,5 +134,3 @@ class Patch(object):
         assert self.dX.size == 1, 'not implemented'
         self.nonLocalGradient = NonLocalGradient(self.dX[0], self.shape[0],
                                                  self.N[0])
-
-
