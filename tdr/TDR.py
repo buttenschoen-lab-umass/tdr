@@ -79,6 +79,7 @@ class TDR(object):
         self.FTrans         = None # diffusion term
         self.size           = noPDEs
         self.dimensions     = dimensions
+        self.bw             = kwargs.pop('bw', 0)
 
         # for easy checking of requirements
         self.haveReactionTerms      = False
@@ -118,10 +119,11 @@ class TDR(object):
     """ compute required boundaryWidth """
     def get_bw(self):
         if self.hasTransport():
-            return 2
+            return np.max(2, self.bw)
         elif self.hasDiffusion():
-            return 1
-        return 0
+            return np.max(1, self.bw)
+
+        return self.bw
 
 
     """ This is the entry point for the integrator """
@@ -133,7 +135,7 @@ class TDR(object):
         #print('y:')
         #print(y[560:640])
         if np.any(np.abs(y) > 1.e5):
-            raise ValueError("Encountered large in TDR update at time: %.4g" % t)
+            raise ValueError("Encountered too large values in TDR update at time: %.4g" % t)
 
         # update everything
         self.update(t, y)
@@ -142,6 +144,7 @@ class TDR(object):
         assert self.ydot is not None, ''
 
         # return the new ydot
+        print('\tyDot:', self.ydot[512:517],' shape:',self.ydot.shape)
         return self.ydot
 
 
@@ -197,6 +200,7 @@ class TDR(object):
 
         # compute the fluxes
         for name, flux in self.fluxTerms.items():
+            print('Applying:', name)
             self.grid.apply_flux(flux)
 
         self.ydot = self.grid.get_ydot()

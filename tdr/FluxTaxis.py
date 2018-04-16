@@ -66,7 +66,7 @@ class TaxisFlux(Flux):
 
     """ Implementation details """
     def _flux_1d(self, i, j, patch):
-        if i == j: # this has already been done
+        if i == j: # this means diffusion!
             return
 
         # TODO suppose that the coefficient is constant for the moment
@@ -137,10 +137,13 @@ class TaxisFlux(Flux):
         patch.data.ydot[i, :] += (-1. / patch.step_size()) * \
                 (taxisApprox[1:] - taxisApprox[:-1])
 
-        print('taxisLeft:', taxisApprox[:5])
-        print('taxisRigh:', taxisApprox[-5:])
-        print('left:',patch.data.ydot[i, :5])
-        print('right:',patch.data.ydot[i, -5:])
+        #patch.data.ydot[i,0] = 1.05 * patch.data.ydot[i,1]
+
+        #print('\t\ttaxisLeft:', taxisApprox[:5])
+        #print('\t\tleft:',patch.data.ydot[i, :5])
+        #print('\t\tVlef:',self.vij[:5])
+        #print('\t\ttaxisRigh:', taxisApprox[-5:])
+        #print('\t\tright:',patch.data.ydot[i, -5:])
 
 
 
