@@ -15,7 +15,7 @@ from FluxDiffusion import DiffusionFlux
 from FluxTaxis import TaxisFlux
 from FluxReaction import ReactionFlux
 
-from utils import zeros, asarray
+from utils import zeros, asarray, offdiagonal
 
 #
 # TODO: MySQL integration for data storage
@@ -128,7 +128,12 @@ class TDR(object):
     def __call__(self, t, y):
         # check that we dont have NaN values
         if np.isnan(np.sum(y)):
-            raise ValueError("Encountered NaN in TDR update")
+            raise ValueError("Encountered NaN in TDR update at time: %.4g" % t)
+
+        #print('y:')
+        #print(y[560:640])
+        if np.any(np.abs(y) > 1.e5):
+            raise ValueError("Encountered large in TDR update at time: %.4g" % t)
 
         # update everything
         self.update(t, y)
@@ -157,6 +162,7 @@ class TDR(object):
         # load transition matrices
         trans    = asarray(kwargs.pop('transitionMatrix', zeros(self.size)))
         Adhtrans = asarray(kwargs.pop('AdhesionTransitionMatrix', zeros(self.size)))
+        #Txstrans = asarray(kwargs.pop('TaxisTransitionMatrix', zeros(self.size)))
         reaction = asarray(kwargs.pop('reactionTerms', np.full(self.size, None)))
 
         # grid information
@@ -166,13 +172,17 @@ class TDR(object):
                          nonLocal = np.sum(np.abs(Adhtrans))!=0, **kwargs)
 
         # create basic flux types
-        if np.any(trans != 0):
+        if np.any(np.diagonal(trans) != 0):
             dFlux = DiffusionFlux(self.size, self.dimensions, trans)
             self.fluxTerms['diffusion'] = dFlux
 
-        if np.any(Adhtrans != 0):
-            tFlux = TaxisFlux(self.size, self.dimensions, trans, Adhtrans)
+        if np.any(Adhtrans != 0) or np.any(offdiagonal(trans) != 0):
+            tFlux = TaxisFlux(self.size, self.dimensions, trans, Adhtrans, nonLocal = True)
             self.fluxTerms['taxis'] = tFlux
+
+        #if np.any(Txstrans != 0):
+        #    tFlux = TaxisFlux(self.size, self.dimensions, Txstrans, nonLocal = False)
+        #    self.fluxTerms['taxis'] = tFlux
 
         if np.any(reaction != None):
             rFlux = ReactionFlux(self.size, self.dimensions, reaction)

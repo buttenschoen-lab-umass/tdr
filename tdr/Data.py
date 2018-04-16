@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Author: Andreas Buttenschoen
+from __future__ import print_function
+
 """
     This class implements the scratch space for a given patch. It also compute
     several gradients, which are later used by the flux computations.
@@ -147,6 +149,7 @@ class Data(object):
             # | y1 | y0 || y0 | y1 |
             nCb = np.arange(bw, 0, -1) - 1
             self.y[:, 0:bw] = self.y[:, nCb + bw]
+            #print('NeumannLeft:',self.y[1, 0:10])
         else:
             assert False, 'not implemented'
 
@@ -163,6 +166,7 @@ class Data(object):
             Cb  = np.arange(0, bw)
             nCb = np.arange(1, -bw+1, -1)
             self.y[:, Cb + nx + bw] = self.y[:, nCb + nx]
+            #print('NeumannRight:',self.y[1, -10:])
         else:
             assert False, 'Not implemented'
 

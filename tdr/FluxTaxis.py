@@ -1,25 +1,48 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Author: Andreas Buttenschoen
+from __future__ import print_function
 
 import numpy as np
 
-from utils import VanLeer
+from utils import VanLeer, FirstOrder
 from Flux import Flux
 
 
 class TaxisFlux(Flux):
     def __init__(self, noPDEs, dimensions, transitionMatrix,
-                 transitionMatrixAdhesion):
+                 transitionMatrixAdhesion, *args, **kwargs):
+        # Call parent constructor
         super(TaxisFlux, self).__init__(noPDEs, dimensions, transitionMatrix)
 
         # extra vars for Taxis Flux
         self.velNonZero = False
         self.limiter    = VanLeer
+        self.limiter    = FirstOrder
         self.transAdh   = transitionMatrixAdhesion
 
         # set priority
-        self.priority = 20
+        self.priority   = 20
+
+        # taxis call
+        self._taxisCall = None
+
+
+    """ Setup """
+    #def _setup(self):
+    #    nonLocalTaxis = np.any(self.transAdh != 0)
+    #    localTaxis    = np.any(self.trans != 0)
+
+    #    if nonLocalTaxis and localTaxis:
+    #        assert False, 'Can\'t be both non-local and local!'
+
+    #    if nonLocalTaxis:
+    #        self._taxisCall = self._adh_flux_1d
+    #    elif localTaxis:
+    #        self._taxisCall = self._flux_1d
+    #    else:
+    #        print("Using a dummy flux!")
+    #        self._taxisCall = self._dummy_flux
 
 
     """ i: is the number of PDE """
@@ -27,12 +50,14 @@ class TaxisFlux(Flux):
         # compute the flux for each of the PDEs
         for i in range(self.n):
             # FIXME works only in 1D atm!
+            self.velNonZero = False
 
             self.vij = np.zeros(1 + patch.size())
             #print('vij=',self.vij.shape)
 
             for j in range(self.n):
-                self.call(i, j, patch)
+                # self.call(i, j, patch)
+                self._flux_1d(i, j, patch)
                 self._adh_flux_1d(i, j, patch)
 
             if self.velNonZero:
@@ -70,6 +95,11 @@ class TaxisFlux(Flux):
             self.vij += aij * A
 
 
+    """ dummy flux """
+    def _dummy_flux(self, i, j, patch):
+        pass
+
+
     """
         This function uses the velocity approximations to compute the taxis
         approximations and finally compute HT.
@@ -80,29 +110,37 @@ class TaxisFlux(Flux):
         bw = patch.boundaryWidth
         y  = patch.data.y[i, :]
 
+        # get the current state, and the state shifted by one see (3.12)
+        ui      = y[bw-1:-bw]
+        ui_p1   = y[bw:-bw+1]
+
         # compute differences between cells
-        fwd  = y[bw:-bw+1]  - y[bw-1:-bw]
-        bwd  = y[bw-1:-bw]  - y[bw-2:-bw-1]
-        fwd2 = y[bw+1:]     - y[bw:-bw+1]
+        fwd  = ui_p1        - ui
+        bwd  = ui           - y[:-bw-1]
+        fwd2 = y[bw+1:]     - ui_p1
 
         # Positive velocity
         # compute smoothness monitor
         r = fwd / (bwd - (np.abs(bwd) < 1.e-14))
 
-        # approximation
-        taxisApprox = (y[bw:-bw+1] + 0.5 * self.limiter(r) * bwd) * \
-                (np.abs(self.vij)>0) * self.vij
+        # approximation for positive velocities
+        taxisApprox = (ui + 0.5 * self.limiter(r) * bwd) * (self.vij>0) * self.vij
 
-        # negative velocity
-        # compute smoothness monitor
+        ## negative velocity
+        ## compute smoothness monitor
         r = fwd / (fwd2 - (np.abs(fwd2) < 1.e-14))
 
-        taxisApprox += (y[bw:-bw+1] - 0.5 * self.limiter(r) * fwd2) * \
-                (np.abs(self.vij)<0) * self.vij
+        # compute approximation for negative velocities
+        taxisApprox += (ui_p1 - 0.5 * self.limiter(r) * fwd2) * (self.vij<0) * self.vij
 
         # Now compute HT
         patch.data.ydot[i, :] += (-1. / patch.step_size()) * \
                 (taxisApprox[1:] - taxisApprox[:-1])
+
+        print('taxisLeft:', taxisApprox[:5])
+        print('taxisRigh:', taxisApprox[-5:])
+        print('left:',patch.data.ydot[i, :5])
+        print('right:',patch.data.ydot[i, -5:])
 
 
 

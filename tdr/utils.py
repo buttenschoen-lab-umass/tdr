@@ -15,7 +15,9 @@ def PeriodicGradient(u):
 
 
 # the vanLeer limiter
-VanLeer = lambda r : (r + np.abs(r)) / (1. + np.abs(r))
+VanLeer     = lambda r : (r + np.abs(r)) / (1. + np.abs(r))
+FirstOrder  = lambda r : 0.
+Koren       = lambda r : np.max(0., np.min(2., np.min(2. * r, (1. + 2. * r) / 3.)))
 
 
 def asarray(obj, dtype=None):
@@ -33,6 +35,21 @@ def repeat_array(arr, targetLength):
     if targetLength > 1 and arr.size == 1:
         arr = np.repeat(arr, targetLength)
     return arr
+
+
+def get_diagonal(arr):
+    sh = arr.shape
+    assert sh[0] == sh[1], 'Matrix must be square!'
+    rarr = np.zeros_like(arr)
+    for i in range(sh[0]):
+        rarr[i, i] = arr[i, i]
+
+    return rarr
+
+
+def offdiagonal(arr):
+    diag = get_diagonal(arr)
+    return arr - diag
 
 
 def apply_along_column(functions, arr):
