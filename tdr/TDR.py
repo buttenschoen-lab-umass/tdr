@@ -144,7 +144,8 @@ class TDR(object):
         assert self.ydot is not None, ''
 
         # return the new ydot
-        print('\tyDot:', self.ydot[512:517],' shape:',self.ydot.shape)
+        print('\tyDot:', self.ydot[513:517],' shape:',self.ydot.shape)
+        print('\ty:', y[513:517],' shape:',y.shape)
         return self.ydot
 
 

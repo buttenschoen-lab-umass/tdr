@@ -5,7 +5,7 @@ from __future__ import print_function
 
 import numpy as np
 
-from utils import VanLeer, FirstOrder
+from utils import VanLeer
 from Flux import Flux
 
 
@@ -18,7 +18,6 @@ class TaxisFlux(Flux):
         # extra vars for Taxis Flux
         self.velNonZero = False
         self.limiter    = VanLeer
-        self.limiter    = FirstOrder
         self.transAdh   = transitionMatrixAdhesion
 
         # set priority
@@ -71,6 +70,7 @@ class TaxisFlux(Flux):
 
         # TODO suppose that the coefficient is constant for the moment
         pij   = self.trans[i, j]
+        #print('p[%d, %d]: %.2f:' % (i,j,pij))
         if pij != 0.:
             self.velNonZero = True
             uDx = patch.data.uDx[j, :]
@@ -134,8 +134,19 @@ class TaxisFlux(Flux):
         taxisApprox += (ui_p1 - 0.5 * self.limiter(r) * fwd2) * (self.vij<0) * self.vij
 
         # Now compute HT
-        patch.data.ydot[i, :] += (-1. / patch.step_size()) * \
+        patch.data.ydot[i, :] -= (1. / patch.step_size()) * \
                 (taxisApprox[1:] - taxisApprox[:-1])
+
+        # debug
+        #
+        # now that H_T + div(u(t, x) p grad(c)) = O(h^2)
+        #
+        #HT = (-1. / patch.step_size()) * (taxisApprox[1:] - taxisApprox[:-1])
+        #flux = (1. / patch.step_size()) * self.vij * y[bw-1:-bw]
+        #dflux = flux[1:] - flux[:-1]
+        #error = HT + dflux
+        #print('Error:', np.max(error))
+        #print('\tE:',error[0:10])
 
         #patch.data.ydot[i,0] = 1.05 * patch.data.ydot[i,1]
 
