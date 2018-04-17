@@ -132,8 +132,6 @@ class TDR(object):
         if np.isnan(np.sum(y)):
             raise ValueError("Encountered NaN in TDR update at time: %.4g" % t)
 
-        #print('y:')
-        #print(y[560:640])
         if np.any(np.abs(y) > 1.e5):
             raise ValueError("Encountered too large values in TDR update at time: %.4g" % t)
 
@@ -144,8 +142,6 @@ class TDR(object):
         assert self.ydot is not None, ''
 
         # return the new ydot
-        print('\tyDot:', self.ydot[513:517],' shape:',self.ydot.shape)
-        print('\ty:', y[513:517],' shape:',y.shape)
         return self.ydot
 
 
@@ -201,7 +197,6 @@ class TDR(object):
 
         # compute the fluxes
         for name, flux in self.fluxTerms.items():
-            print('Applying:', name)
             self.grid.apply_flux(flux)
 
         self.ydot = self.grid.get_ydot()

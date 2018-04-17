@@ -137,26 +137,6 @@ class TaxisFlux(Flux):
         patch.data.ydot[i, :] -= (1. / patch.step_size()) * \
                 (taxisApprox[1:] - taxisApprox[:-1])
 
-        # debug
-        #
-        # now that H_T + div(u(t, x) p grad(c)) = O(h^2)
-        #
-        #HT = (-1. / patch.step_size()) * (taxisApprox[1:] - taxisApprox[:-1])
-        #flux = (1. / patch.step_size()) * self.vij * y[bw-1:-bw]
-        #dflux = flux[1:] - flux[:-1]
-        #error = HT + dflux
-        #print('Error:', np.max(error))
-        #print('\tE:',error[0:10])
-
-        #patch.data.ydot[i,0] = 1.05 * patch.data.ydot[i,1]
-
-        #print('\t\ttaxisLeft:', taxisApprox[:5])
-        #print('\t\tleft:',patch.data.ydot[i, :5])
-        #print('\t\tVlef:',self.vij[:5])
-        #print('\t\ttaxisRigh:', taxisApprox[-5:])
-        #print('\t\tright:',patch.data.ydot[i, -5:])
-
-
 
 if __name__ == '__main__':
     from testing import create_test
