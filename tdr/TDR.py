@@ -63,7 +63,39 @@ from utils import zeros, asarray, offdiagonal
 
         2) Taxis
 
-            TODO
+                                1   d
+            H_(T)(U(t), i) = - ---  ∑ (T_(j)(U(t), i) - T_(j)(U(t), i - ej))
+                                h  j=1
+
+            where::
+                T_(j)(U(t), i) is the average of the tactic flux through the
+                interface of Ω_(i) and Ω_(i + ej)
+
+                T_(j)(U(t), i) = max{0, v_(ij)} S_(j)^(+)(U, i) + min{0, v_(ij)} S_(j)^(-)(U, i)
+
+                where::
+                    v_(ij) is the approximate average of the tactic velocity
+                    through the interface of Ω_(i) and Ω_(i + ej)
+
+                    S_(j)^(+/-)(U, i) are the state interpolants
+
+                                      / U_i + 0.5 * Phi(r_(ij))(U_i - U_(i - ej))
+                    S_(j)^(+)(U, i) = |
+                                      \ U_i, if U_i = U_(i - ej)
+
+
+                                      / U_(i + ej) + 0.5 * Phi(r^(-1)_(ij))(U_(i + ej) - U_(i + 2ej))
+                    S_(j)^(-)(U, i) = |
+                                      \ U_(i + ej), if U_(i + ej) = U_(i + 2ej)
+
+                    where::
+                        Phi() is the flux limiter. Below we use the so called vanLeer flux limiter.
+
+                        r_(ij) is the smoothness monitor defined by:
+
+                                   U_(i + ej) - U_i
+                        r_(ij) =  -----------------
+                                   U_i - U_(i - ej)
 
         3) Reaction
 
