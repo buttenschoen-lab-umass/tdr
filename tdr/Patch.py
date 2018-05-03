@@ -53,6 +53,10 @@ class Patch(object):
         self.ngb = kwargs.pop('ngb', DomainBoundary(self.dim))
         self.shape = self.N * self.dX
 
+        # TODO: Solve this more elegantly
+        if nonLocal and (self.ngb.left.name != 'Periodic' or self.ngb.right.name != 'Periodic'):
+            assert False, 'Non-local equation can only be solved on a periodic domain!'
+
         self.patchId = patchId
         # TODO set DEPRECATE ONE!
         self.boundaryWidth = boundaryWidth

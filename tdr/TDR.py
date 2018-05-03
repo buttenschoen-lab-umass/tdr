@@ -177,11 +177,19 @@ class TDR(object):
         return self.ydot
 
 
+    """ get number of patches """
+    def _get_nops(self, requested_nop):
+        if self.dimensions == 1:
+            return 1
+
+        return requested_nop
+
+
     """ setup TDR """
     def _setup(self, *args, **kwargs):
         # Load Grid data and create Grid
         # number of patches
-        nop = kwargs.pop('nop', 1)
+        nop = self._get_nops(kwargs.pop('nop', 1))
         dom = kwargs.pop('domain', Interval(0, 1))
         ngb = np.asarray(dom.bd).reshape(1)
         dX  = asarray(dom.dX)
