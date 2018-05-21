@@ -6,6 +6,7 @@ from __future__ import print_function, division
 import numpy as np
 from .utils import cartesian
 from .Data import Data
+from .Boundary import DomainBoundary2D
 from .NonLocalGradient import NonLocalGradient
 
 
@@ -56,7 +57,7 @@ class Patch2D(object):
         self.n   = n
         self.dim = N.size
         self.dX  = dX
-        self.ngb = kwargs.pop('ngb', None)
+        self.ngb = kwargs.pop('ngb', DomainBoundary2D())
         self.shape = self.N * self.dX
 
         self.patchId = patchId

@@ -70,3 +70,64 @@ class Interval(object):
         return self.__repr__()
 
 
+"""
+    2-D square.
+"""
+class Square(object):
+    def __init__(self, a, b, c, d, *args, **kwargs):
+        # set the basic parameters
+        self.x0                 = a
+        self.xf                 = b
+        self.y0                 = c
+        self.yf                 = d
+
+        # number of patches -> in 1D always one
+        self.nop                = 1
+
+        # Length parameters
+        self.n                  = kwargs.pop('n', 8)
+        self.cellsPerUnitLength = kwargs.pop('cellsPerUnitLength', 2**self.n)
+        self.h                  = 1. / self.cellsPerUnitLength
+
+        self.bd                 = kwargs.pop('bd', DomainBoundary())
+
+        # call reset
+        self._reset()
+
+
+    """ Internal methods """
+    def _reset(self):
+        self.L          = np.array([self.xf - self.x0, self.yf - self.y0])
+        self.N          = self.L * self.cellsPerUnitLength
+        self.dX         = self.h * np.ones(2)
+
+
+    """ Public methods """
+    def xs(self):
+        return np.linspace(self.x0, self.xf - self.h, self.N[0])
+
+
+    def ys(self):
+        return np.linspace(self.y0, self.yf - self.h, self.N[1])
+
+
+    def box(self):
+        return [self.x0, self.xf, self.y0, self.yf]
+
+
+    def resize(self, arr):
+        assert False, 'Not implemented for the 2D-square'
+
+
+    def size(self):
+        return int(np.sum(self.N))
+
+
+    def __repr__(self):
+        return 'Square(%.2f, %.2f, %.2f, %.2f, %d)' % (self.x0, self.xf, self.y0, self.yf, self.N)
+
+
+    def __str__(self):
+        return self.__repr__()
+
+
