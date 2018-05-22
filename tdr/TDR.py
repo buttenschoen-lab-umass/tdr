@@ -191,8 +191,6 @@ class TDR(object):
         # set dimension
         self.dimensions = dom.dimensions()
 
-        print('N:', N, ' dX:', dX)
-
         # save domain
         self.dom = dom
 

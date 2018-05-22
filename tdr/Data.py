@@ -121,7 +121,6 @@ class Data(object):
 
     """ Set values """
     def set_values_1d(self, t, y):
-        print('Data 1d')
         self.t              = t
         bw                  = self.boundaryWidth
         nx                  = y.shape[1]

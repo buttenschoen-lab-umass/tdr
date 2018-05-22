@@ -5,6 +5,7 @@ from __future__ import print_function
 
 import numpy as np
 from Patch import Patch
+from utils import expand_dims
 
 
 class Grid(object):
@@ -86,7 +87,7 @@ class Grid(object):
 
 
     def shape(self):
-        shp = np.zeros(2, dtype=np.int)
+        shp = np.zeros(self.dim, dtype=np.int)
         for patch in self.patches.values():
             shp += patch.get_shape()
 
@@ -116,16 +117,11 @@ class Grid(object):
         N   = grd['N']
         x0  = grd['x0']
 
-        print('Grid init: nop %d' % nop)
-        print(ngb)
         if nop == 1: # and isinstance(ngb, DomainBoundary):
-            #ngb = [ngb]
-
-            # expand dims
-            print('Expanding dimensions')
-            dX = np.expand_dims(dX, axis=0)
-            N  = np.expand_dims(N,  axis=0)
-            x0 = np.expand_dims(x0, axis=0)
+            # expand dims if required
+            dX = expand_dims(dX, self.dim)
+            N  = expand_dims(N,  self.dim)
+            x0 = expand_dims(x0, self.dim)
 
 
         for i in range(nop):

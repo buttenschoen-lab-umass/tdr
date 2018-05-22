@@ -87,9 +87,9 @@ class DomainBoundary(object):
         self.dim = kwargs.pop('dim', 1)
 
         if self.dim == 1:
-            self._setup_1d(args, kwargs)
+            self._setup_1d(*args, **kwargs)
         elif self.dim == 2:
-            self._setup_2d(args, kwargs)
+            self._setup_2d(*args, **kwargs)
         else:
             assert 'DomainBoundary not implemented for %dd' % self.dim
 
@@ -119,7 +119,6 @@ class DomainBoundary(object):
         # allow easy lookup
         setattr(self, 'left',   self.left)
         setattr(self, 'right',  self.right)
-
         setattr(self, 'top',    self.top)
         setattr(self, 'bottom', self.bottom)
 

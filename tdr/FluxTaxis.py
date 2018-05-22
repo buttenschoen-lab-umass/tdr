@@ -46,11 +46,23 @@ class TaxisFlux(Flux):
     """ i: is the number of PDE """
     def __call__(self, patch):
         # compute the flux for each of the PDEs
+        # TODO: test
+        bw = patch.boundaryWidth
+        uu = np.ones_like(patch.data.y[:, bw:-bw])
+        for i in range(self.n):
+            uu -= patch.data.y[i, bw:-bw]
+        m = np.where(uu < 0.)
+        uu[m] = 0.
+        self.adh_mult = uu
+
         for i in range(self.n):
             # FIXME works only in 1D atm!
             self.velNonZero = False
 
             self._init_vel(patch)
+
+            # TODO!
+            #self.adh_mult = uu * self.y[i, bw:-bw]
 
             for j in range(self.n):
                 self._taxisCall(i, j, patch)
@@ -108,7 +120,7 @@ class TaxisFlux(Flux):
         if aij != 0.:
             self.velNonZero = True
             bw = patch.boundaryWidth
-            G  = patch.data.y[j, bw:-bw]
+            G  = patch.data.y[j, bw:-bw] * self.adh_mult
             a  = patch.nonLocalGradient(G).real
             A  = np.hstack((a[-1], a))
 

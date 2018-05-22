@@ -31,6 +31,13 @@ def asarray(obj, dtype=None):
     return arr
 
 
+def expand_dims(array, dimension):
+    if array.ndim != dimension + 1:
+        return np.expand_dims(array, axis=0)
+
+    return array
+
+
 def repeat_array(arr, targetLength):
     if targetLength > 1 and arr.size == 1:
         arr = np.repeat(arr, targetLength)
