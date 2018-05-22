@@ -42,14 +42,15 @@ class Patch(object):
         TODO
 
     """
-    def __init__(self, n, patchId, x0, dX, N,
-                 boundaryWidth = 0, nonLocal=False, **kwargs):
+    def __init__(self, n, patchId, x0, dX, N, boundaryWidth = 0, nonLocal=False, **kwargs):
+        print('Creating patch: %d, origin: %s, dX: %s, N: %s.' % (patchId, x0, dX, N))
+
         self.x0  = x0
         self.N   = N
         self.n   = n
         self.dim = N.size
         self.dX  = dX
-        self.ngb = kwargs.pop('ngb', DomainBoundary())
+        self.ngb = kwargs.pop('ngb', DomainBoundary(self.dim))
         self.shape = self.N * self.dX
 
         self.patchId = patchId
@@ -82,7 +83,7 @@ class Patch(object):
 
 
     def endPoints(self):
-        return self.x0 + np.array([0, self.length()])
+        return self.x0 + self.length()
 
 
     def apply_flux(self, flux):
@@ -90,7 +91,7 @@ class Patch(object):
 
 
     def step_size(self):
-        return self.dX[0]
+        return self.dX
 
 
     def size(self):
@@ -105,6 +106,11 @@ class Patch(object):
         return self.data.ydot
 
 
+    def get_shape(self):
+        return self.N
+
+
+    """ Resizing of the domain """
     # only for 1D so far
     # TODO: optimize the recomp of cell centers!
     def growPatchRight(self):
@@ -137,7 +143,7 @@ class Patch(object):
     def _setup_cell_centers(self):
         xcs = []
         for i in range(self.N.size):
-            #print('i=',i,' N:', self.N, ' dX:', self.dX)
+            print('i=',i,' N:', self.N, ' dX:', self.dX)
             xcs.append((np.arange(1, self.N[i] + 1, 1) - 0.5) * self.dX[i])
 
         self.xc = np.array(xcs)
@@ -153,7 +159,6 @@ class Patch(object):
 
     def _setup_nonlocal(self):
         assert self.dX.size == 1, 'not implemented'
-        self.nonLocalGradient = NonLocalGradient(self.dX[0], self.shape[0],
-                                                 self.N[0])
+        self.nonLocalGradient = NonLocalGradient(self.dX[0], self.shape[0], self.N[0])
 
 

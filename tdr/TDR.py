@@ -103,14 +103,14 @@ from utils import zeros, asarray, offdiagonal
 
 """
 class TDR(object):
-    def __init__(self, noPDEs = 1, dimensions = 1, *args, **kwargs):
+    def __init__(self, noPDEs = 1, *args, **kwargs):
         # terms
         self.version        = 'TDR-python-0.1'
         self.FNonLocal      = None # the non-local term
         self.FReac          = None # reaction terms
         self.FTrans         = None # diffusion term
         self.size           = noPDEs
-        self.dimensions     = dimensions
+        self.dimensions     = 1
         self.bw             = kwargs.pop('bw', 0)
 
         # for easy checking of requirements
@@ -185,8 +185,13 @@ class TDR(object):
         dom = kwargs.pop('domain', Interval(0, 1))
         ngb = np.asarray(dom.bd).reshape(1)
         dX  = asarray(dom.dX)
-        x0  = asarray(dom.x0)
+        x0  = asarray(dom.origin())
         N   = asarray(dom.N, np.int)
+
+        # set dimension
+        self.dimensions = dom.dimensions()
+
+        print('N:', N, ' dX:', dX)
 
         # save domain
         self.dom = dom
@@ -236,7 +241,8 @@ class TDR(object):
 
     """ reshape the data """
     def reshape(self, y):
-        return y.reshape(self.size, self.grid.gridsize)
+        new_shape = np.insert(self.grid.shape(), 0, self.size)
+        return y.reshape(new_shape)
 
 
     """ Resize the domain """

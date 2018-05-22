@@ -5,7 +5,6 @@ from __future__ import print_function
 
 import numpy as np
 from Patch import Patch
-from Boundary import DomainBoundary
 
 
 class Grid(object):
@@ -86,6 +85,14 @@ class Grid(object):
         pass
 
 
+    def shape(self):
+        shp = np.zeros(2, dtype=np.int)
+        for patch in self.patches.values():
+            shp += patch.get_shape()
+
+        return shp
+
+
     """ Implementation details """
     def __iter__(self):
         for patch in self.patches.values():
@@ -109,8 +116,17 @@ class Grid(object):
         N   = grd['N']
         x0  = grd['x0']
 
-        if nop == 1 and isinstance(ngb, DomainBoundary):
-            ngb = [ngb]
+        print('Grid init: nop %d' % nop)
+        print(ngb)
+        if nop == 1: # and isinstance(ngb, DomainBoundary):
+            #ngb = [ngb]
+
+            # expand dims
+            print('Expanding dimensions')
+            dX = np.expand_dims(dX, axis=0)
+            N  = np.expand_dims(N,  axis=0)
+            x0 = np.expand_dims(x0, axis=0)
+
 
         for i in range(nop):
             self.patches[i] = Patch(self.n, i + 1, x0[i], dX[i], N[i],
@@ -120,7 +136,7 @@ class Grid(object):
 
             # TODO make more general!
             self.ps[i] = 0
-            self.pe[i] = int(self.n * N[i])
+            self.pe[i] = int(self.n * np.prod(N[i]))
 
 
     def _compute_size(self):

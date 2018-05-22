@@ -12,6 +12,11 @@ from Flux import Flux
 class TaxisFlux(Flux):
     def __init__(self, noPDEs, dimensions, transitionMatrix,
                  transitionMatrixAdhesion, *args, **kwargs):
+        # taxis call
+        self._taxisCall = None
+        self._adhCall   = None
+        self._finish    = None
+
         # Call parent constructor
         super(TaxisFlux, self).__init__(noPDEs, dimensions, transitionMatrix)
 
@@ -23,25 +28,19 @@ class TaxisFlux(Flux):
         # set priority
         self.priority   = 20
 
-        # taxis call
-        self._taxisCall = None
-
 
     """ Setup """
-    #def _setup(self):
-    #    nonLocalTaxis = np.any(self.transAdh != 0)
-    #    localTaxis    = np.any(self.trans != 0)
-
-    #    if nonLocalTaxis and localTaxis:
-    #        assert False, 'Can\'t be both non-local and local!'
-
-    #    if nonLocalTaxis:
-    #        self._taxisCall = self._adh_flux_1d
-    #    elif localTaxis:
-    #        self._taxisCall = self._flux_1d
-    #    else:
-    #        print("Using a dummy flux!")
-    #        self._taxisCall = self._dummy_flux
+    def _setup(self):
+        if self.dim == 1:
+            self._taxisCall = self._flux_1d
+            self._adhCall   = self._adh_flux_1d
+            self._finish    = self._finish_1d
+        elif self.dim == 2:
+            self._taxisCall = self._flux_2d
+            self._adhCall   = self._dummy_flux
+            self._finish    = self._finish_2d
+        else:
+            assert False, 'At the moment we only support 1D and 2D simulations.'
 
 
     """ i: is the number of PDE """
@@ -51,19 +50,28 @@ class TaxisFlux(Flux):
             # FIXME works only in 1D atm!
             self.velNonZero = False
 
-            self.vij = np.zeros(1 + patch.size())
-            #print('vij=',self.vij.shape)
+            self._init_vel(patch)
 
             for j in range(self.n):
-                # self.call(i, j, patch)
-                self._flux_1d(i, j, patch)
-                self._adh_flux_1d(i, j, patch)
+                self._taxisCall(i, j, patch)
+                self._adhCall(i, j, patch)
 
             if self.velNonZero:
                 self._finish(i, patch)
 
 
     """ Implementation details """
+    def _init_vel(self, patch):
+        if self.dim == 1:
+            self.vij = np.zeros(1 + patch.size())
+        elif self.dim == 2:
+            shape = patch.get_shape()
+            self.vxij = np.zeros(shape + [1, 0])
+            self.vyij = np.zeros(shape + [0, 1])
+        else:
+            assert False, 'not implemented for higher dimensions!'
+
+
     def _flux_1d(self, i, j, patch):
         if i == j: # this means diffusion!
             return
@@ -75,6 +83,21 @@ class TaxisFlux(Flux):
             self.velNonZero = True
             uDx = patch.data.uDx[j, :]
             self.vij += pij * uDx
+
+
+    def _flux_2d(self, i, j, patch):
+        if i == j: # this means diffusion!
+            return
+
+        # TODO suppose that the coefficient is constant for the moment
+        pij   = self.trans[i, j]
+        #print('p[%d, %d]: %.2f:' % (i,j,pij))
+        if pij != 0.:
+            self.velNonZero = True
+            uDx = patch.data.uDx[j, :]
+            uDy = patch.data.uDy[j, :]
+            self.vxij += pij * uDx
+            self.vyij += pij * uDy
 
 
     """ adhesion flux """
@@ -106,7 +129,7 @@ class TaxisFlux(Flux):
 
         For the mathematical details see A. Gerisch 2001.
     """
-    def _finish(self, i, patch):
+    def _finish_1d(self, i, patch):
         bw = patch.boundaryWidth
         y  = patch.data.y[i, :]
 
@@ -136,6 +159,66 @@ class TaxisFlux(Flux):
         # Now compute HT
         patch.data.ydot[i, :] -= (1. / patch.step_size()) * \
                 (taxisApprox[1:] - taxisApprox[:-1])
+
+
+    def _finish_2d(self, i, patch):
+        bw = patch.boundaryWidth
+        y  = patch.data.y[i, :]
+        dx = patch.step_size()
+
+        # Compute the velocity for the x-coordinate
+        # get the current state, and the state shifted by one see (3.12)
+        ui          = y[bw-1:-bw, bw:-bw]
+        ui_p1       = y[bw:-bw+1, bw:-bw]
+
+        # compute differences between cells
+        fwd  = ui_p1                - ui
+        bwd  = ui                   - y[:-bw-1, bw:-bw]
+        fwd2 = y[bw+1:, bw:-bw]     - ui_p1
+
+        # Positive velocity
+        # compute smoothness monitor
+        r = fwd / (bwd - (np.abs(bwd) < 1.e-14))
+
+        # approximation for positive velocities
+        taxisApprox = (ui + 0.5 * self.limiter(r) * bwd) * (self.vxij>0) * self.vxij
+
+        ## negative velocity
+        ## compute smoothness monitor
+        r = fwd / (fwd2 - (np.abs(fwd2) < 1.e-14))
+
+        # compute approximation for negative velocities
+        taxisApprox += (ui_p1 - 0.5 * self.limiter(r) * fwd2) * (self.vxij<0) * self.vxij
+
+        # Now compute HT
+        patch.data.ydot[i, :] -= (1. / dx[0]) * (taxisApprox[1:, :] - taxisApprox[:-1, :])
+
+        # Compute the velocity for the y-coordinate
+        # get the current state, and the state shifted by one see (3.12)
+        ui          = y[bw:-bw, bw-1:-bw]
+        ui_p1       = y[bw:-bw, bw:-bw+1]
+
+        # compute differences between cells
+        fwd  = ui_p1                - ui
+        bwd  = ui                   - y[bw:-bw, :-bw-1]
+        fwd2 = y[bw:-bw, bw+1:]     - ui_p1
+
+        # Positive velocity
+        # compute smoothness monitor
+        r = fwd / (bwd - (np.abs(bwd) < 1.e-14))
+
+        # approximation for positive velocities
+        taxisApprox = (ui + 0.5 * self.limiter(r) * bwd) * (self.vyij>0) * self.vyij
+
+        ## negative velocity
+        ## compute smoothness monitor
+        r = fwd / (fwd2 - (np.abs(fwd2) < 1.e-14))
+
+        # compute approximation for negative velocities
+        taxisApprox += (ui_p1 - 0.5 * self.limiter(r) * fwd2) * (self.vyij<0) * self.vyij
+
+        # Now compute HT
+        patch.data.ydot[i, :] -= (1. / dx[1]) * (taxisApprox[:, 1:] - taxisApprox[:, :-1])
 
 
 if __name__ == '__main__':

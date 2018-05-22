@@ -6,7 +6,7 @@ from __future__ import print_function, division
 import numpy as np
 from .utils import cartesian
 from .Data import Data
-from .Boundary import DomainBoundary2D
+from .Boundary import DomainBoundary
 from .NonLocalGradient import NonLocalGradient
 
 
@@ -50,14 +50,15 @@ class Patch2D(object):
         TODO
 
     """
-    def __init__(self, n, patchId, x0, dX, N,
-                 boundaryWidth = 0, nonLocal=False, **kwargs):
+    def __init__(self, n, patchId, x0, dX, N, boundaryWidth = 0, nonLocal=False, **kwargs):
+        print('Creating patch: %d, origin: %s, dX: %s, N: %s.' % (patchId, x0, dX, N))
+
         self.x0  = x0
         self.N   = N
         self.n   = n
         self.dim = N.size
         self.dX  = dX
-        self.ngb = kwargs.pop('ngb', DomainBoundary2D())
+        self.ngb = kwargs.pop('ngb', DomainBoundary(self.dim))
         self.shape = self.N * self.dX
 
         self.patchId = patchId
@@ -117,7 +118,7 @@ class Patch2D(object):
     def _setup_cell_centers(self):
         xcs = []
         for i in range(self.N.size):
-            #print('i=',i,' N:', self.N, ' dX:', self.dX)
+            print('i=',i,' N:', self.N, ' dX:', self.dX)
             xcs.append((np.arange(1, self.N[i] + 1, 1) - 0.5) * self.dX[i])
 
         self.xc = np.array(xcs)

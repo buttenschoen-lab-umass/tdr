@@ -83,6 +83,20 @@ class Dirichlet(Boundary):
 """ 1D only at the moment """
 class DomainBoundary(object):
     def __init__(self, *args, **kwargs):
+        # spatial dimension
+        self.dim = kwargs.pop('dim', 1)
+
+        if self.dim == 1:
+            self._setup_1d(args, kwargs)
+        elif self.dim == 2:
+            self._setup_2d(args, kwargs)
+        else:
+            assert 'DomainBoundary not implemented for %dd' % self.dim
+
+
+    """ setup methods """
+    def _setup_1d(self, *args, **kwargs):
+        # process arguments
         self.left  = kwargs.pop('left',  Neumann(-1.))
         self.right = kwargs.pop('right', Neumann( 1.))
 
@@ -94,33 +108,8 @@ class DomainBoundary(object):
         self.lookup = {0 : self.left, 1 : self.right}
 
 
-    """ internal methods """
-    def __getitem__(self, key):
-        return self.lookup[key]
-
-
-    def __iter__(self):
-        for bd in self.lookup.values():
-            yield bd
-
-
-    """ public methods """
-    # TODO: atm we can't deal with different boundary conditions on either side
-    def isPeriodic(self):
-        return self.left.isPeriodic() and self.right.isPeriodic()
-
-
-    def isNeumann(self):
-        return self.left.isNeumann() and self.right.isNeumann()
-
-
-    def isDirichlet(self):
-        return self.left.isDirichlet() and self.right.isDirichlet()
-
-
-""" 2D only at the moment """
-class DomainBoundary2D(object):
-    def __init__(self, *args, **kwargs):
+    def _setup_2d(self, *args, **kwargs):
+        # process arguments
         self.left  = kwargs.pop('left',  Neumann(-1.))
         self.right = kwargs.pop('right', Neumann( 1.))
 
@@ -128,11 +117,14 @@ class DomainBoundary2D(object):
         self.bottom = kwargs.pop('bottom', Neumann( 1.))
 
         # allow easy lookup
-        setattr(self, 'left', self.left)
-        setattr(self, 'right', self.right)
+        setattr(self, 'left',   self.left)
+        setattr(self, 'right',  self.right)
+
+        setattr(self, 'top',    self.top)
+        setattr(self, 'bottom', self.bottom)
 
         # easy indexing
-        self.lookup = {0 : self.left, 1 : self.right}
+        self.lookup = {0 : self.left, 1 : self.right, 2 : self.bottom, 3 : self.top}
 
 
     """ internal methods """
@@ -157,8 +149,6 @@ class DomainBoundary2D(object):
 
     def isDirichlet(self):
         return self.left.isDirichlet() and self.right.isDirichlet()
-
-
 
 
 if __name__ == '__main__':

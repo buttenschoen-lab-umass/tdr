@@ -42,6 +42,14 @@ class Interval(object):
 
 
     """ Public methods """
+    def origin(self):
+        return np.asarray(self.x0)
+
+
+    def dimensions(self):
+        return 1
+
+
     def xs(self):
         return np.linspace(self.x0, self.xf - self.h, self.N)
 
@@ -98,11 +106,19 @@ class Square(object):
     """ Internal methods """
     def _reset(self):
         self.L          = np.array([self.xf - self.x0, self.yf - self.y0])
-        self.N          = self.L * self.cellsPerUnitLength
+        self.N          = np.asarray([self.xf - self.x0, self.yf - self.y0]) * self.cellsPerUnitLength
         self.dX         = self.h * np.ones(2)
 
 
     """ Public methods """
+    def origin(self):
+        return np.asarray([self.x0, self.y0])
+
+
+    def dimensions(self):
+        return 2
+
+
     def xs(self):
         return np.linspace(self.x0, self.xf - self.h, self.N[0])
 

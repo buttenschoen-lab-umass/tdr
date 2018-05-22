@@ -90,6 +90,7 @@ class Data(object):
     """ setup function """
     def _setup(self):
         #assert self.boundary is not None, 'Boundary cannot be None!'
+        print('Data Dim:',self.dim)
         if self.dim == 1:
             self._compute = self._compute_face_data_1d
         elif self.dim == 2:
@@ -120,6 +121,7 @@ class Data(object):
 
     """ Set values """
     def set_values_1d(self, t, y):
+        print('Data 1d')
         self.t              = t
         bw                  = self.boundaryWidth
         nx                  = y.shape[1]
@@ -235,13 +237,6 @@ class Data(object):
         bw = self.boundaryWidth
         assert bw == 2, 'BoundaryWidth must be at least 2 for fluxes!'
 
-        #print('y_size:',self.y.size,' bw:',bw,' shape:', self.y.shape)
-        #print('1st_size:',self.y[:, bw:-bw+1].shape)
-        #print('2nd_size:',self.y[:, bw-1:-bw].shape)
-        #print(self.y)
-        #print('1st:', self.y[:, bw:-bw+1])
-        #print('2nd:', self.y[:, bw-1:-bw])
-
         self.uDx  = (1. / self.dX[0]) * \
                 (self.y[:, bw:-bw+1] - self.y[:, bw-1:-bw])
 
@@ -255,23 +250,6 @@ class Data(object):
     def _compute_uDx_2d(self):
         bw = self.boundaryWidth
         assert bw == 2, 'BoundaryWidth must be at least 2 for fluxes!'
-
-        #print('y_size:',self.y.size,' bw:',bw,' shape:', self.y.shape)
-        #print(self.y)
-        #print('y_size:',self.y.size,' bw:',bw,' shape:', self.y[:, bw:-bw, bw:-bw])
-        #print('y_size:',self.y.size,' bw:',bw,' shape:', self.y[:, bw:-bw, bw:-bw].shape)
-        #print('1st_size:',self.y[:, bw:-bw+1, bw:-bw].shape)
-        #print('2nd_size:',self.y[:, bw-1:-bw, bw:-bw].shape)
-
-        #print('1st_size:')
-        #print(self.y[:, bw:-bw+1, bw:-bw])
-        #print('2nd_size:')
-        #print(self.y[:, bw-1:-bw, bw:-bw])
-        #print('x-axis:')
-        #print(self.y[:, bw, bw:-bw])
-        #print('First coordinate:', self.y[0, bw, bw])
-        #print('Secon coordinate:', self.y[0, bw, bw+1])
-        #print('Third coordinate:', self.y[0, bw, bw+2])
 
         self.uDx  = (1. / self.dX[0]) * \
                 (self.y[:, bw:-bw+1, bw:-bw] - self.y[:, bw-1:-bw, bw:-bw])
