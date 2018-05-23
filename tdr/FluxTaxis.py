@@ -49,10 +49,10 @@ class TaxisFlux(Flux):
         # TODO: test
         bw = patch.boundaryWidth
         uu = np.ones_like(patch.data.y[:, bw:-bw])
-        for i in range(self.n):
-            uu -= patch.data.y[i, bw:-bw]
-        m = np.where(uu < 0.)
-        uu[m] = 0.
+        #for i in range(self.n):
+        #    uu -= patch.data.y[i, bw:-bw]
+        #m = np.where(uu < 0.)
+        #uu[m] = 0.
         self.adh_mult = uu
 
         for i in range(self.n):
