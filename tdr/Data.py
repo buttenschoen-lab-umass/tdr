@@ -90,7 +90,6 @@ class Data(object):
     """ setup function """
     def _setup(self):
         #assert self.boundary is not None, 'Boundary cannot be None!'
-        print('Data Dim:',self.dim)
         if self.dim == 1:
             self._compute = self._compute_face_data_1d
         elif self.dim == 2:

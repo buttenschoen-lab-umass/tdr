@@ -43,7 +43,7 @@ class Patch(object):
 
     """
     def __init__(self, n, patchId, x0, dX, N, boundaryWidth = 0, nonLocal=False, **kwargs):
-        print('Creating patch: %d, origin: %s, dX: %s, N: %s.' % (patchId, x0, dX, N))
+        #print('Creating patch: %d, origin: %s, dX: %s, N: %s.' % (patchId, x0, dX, N))
 
         self.x0  = x0
         self.N   = N
@@ -147,7 +147,7 @@ class Patch(object):
     def _setup_cell_centers(self):
         xcs = []
         for i in range(self.N.size):
-            print('i=',i,' N:', self.N, ' dX:', self.dX)
+            #print('i=',i,' N:', self.N, ' dX:', self.dX)
             xcs.append((np.arange(1, self.N[i] + 1, 1) - 0.5) * self.dX[i])
 
         self.xc = np.array(xcs)
