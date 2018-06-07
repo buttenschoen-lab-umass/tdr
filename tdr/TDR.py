@@ -161,7 +161,7 @@ class TDR(object):
     """ This is the entry point for the integrator """
     def __call__(self, t, y):
         # check that we dont have NaN values
-        if np.isnan(np.sum(y)):
+        if np.any(np.isnan(y)):
             raise ValueError("Encountered NaN in TDR update at time: %.4g" % t)
 
         if np.any(np.abs(y) > 1.e5):
