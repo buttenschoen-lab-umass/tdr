@@ -13,6 +13,7 @@ from Boundary import DomainBoundary
 class Interval(object):
     def __init__(self, a, b, *args, **kwargs):
         # set the basic parameters
+        self.name               = kwargs.pop('name', 'x')
         self.x0                 = a
         self.xf                 = b
 
@@ -39,6 +40,7 @@ class Interval(object):
         self.L                  = np.abs(self.xf - self.x0)
         self.N                  = self.L * self.cellsPerUnitLength
         self.dX                 = asarray(self.h)
+        self.x                  = self.xs()
 
 
     """ Public methods """
