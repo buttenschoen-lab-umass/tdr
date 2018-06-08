@@ -5,17 +5,17 @@ from __future__ import print_function
 import numpy as np
 
 # domain support
-from Domain import Interval
+from tdr.Domain import Interval
 
 # grid
-from Grid import Grid
+from tdr.Grid import Grid
 
 # fluxes
-from FluxDiffusion import DiffusionFlux
-from FluxTaxis import TaxisFlux
-from FluxReaction import ReactionFlux
+from tdr.FluxDiffusion import DiffusionFlux
+from tdr.FluxTaxis import TaxisFlux
+from tdr.FluxReaction import ReactionFlux
 
-from utils import zeros, asarray, offdiagonal
+from tdr.utils import zeros, asarray, offdiagonal
 
 #
 # TODO: MySQL integration for data storage

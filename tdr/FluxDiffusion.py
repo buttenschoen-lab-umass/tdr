@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Author: Andreas Buttenschoen
 
-from .Flux import Flux
+from tdr.Flux import Flux
 
 
 class DiffusionFlux(Flux):

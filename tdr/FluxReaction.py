@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 # Author: Andreas Buttenschoen
 
-from Flux import Flux
-from utils import apply_along_column
+from tdr.Flux import Flux
+from tdr.utils import apply_along_column
 
 class ReactionFlux(Flux):
     def __init__(self, noPDEs, dimensions, transitionMatrix):

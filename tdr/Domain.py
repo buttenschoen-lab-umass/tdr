@@ -3,8 +3,8 @@
 # Author: Andreas Buttenschoen
 
 import numpy as np
-from utils import asarray, round_to_nearest_fraction
-from Boundary import DomainBoundary
+from tdr.utils import asarray, round_to_nearest_fraction
+from tdr.Boundary import DomainBoundary
 
 
 """

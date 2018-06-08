@@ -5,8 +5,8 @@ from __future__ import print_function
 
 import numpy as np
 
-from utils import VanLeer
-from Flux import Flux
+from tdr.utils import VanLeer
+from tdr.Flux import Flux
 
 
 class TaxisFlux(Flux):

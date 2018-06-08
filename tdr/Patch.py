@@ -4,10 +4,11 @@
 from __future__ import print_function, division
 
 import numpy as np
-from .utils import cartesian
-from .Data import Data
-from .NonLocalGradient import NonLocalGradient
-from .Boundary import DomainBoundary
+
+from tdr.utils import cartesian
+from tdr.Data import Data
+from tdr.NonLocalGradient import NonLocalGradient
+from tdr.Boundary import DomainBoundary
 
 
 class Patch(object):
