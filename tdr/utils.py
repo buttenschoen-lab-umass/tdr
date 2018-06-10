@@ -86,7 +86,11 @@ def apply_along_column(functions, arr):
 
     # apply the function row wise
     for row in range(arr.shape[0]):
-        outarray[row, :] = functions[row](*rows)
+        function = functions[row]
+        if function is None:
+            outarray[row, :] = 0
+        else:
+            outarray[row, :] = function(*rows)
 
     return outarray
 
