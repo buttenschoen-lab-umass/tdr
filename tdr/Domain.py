@@ -6,12 +6,16 @@ import numpy as np
 from tdr.utils import asarray, round_to_nearest_fraction
 from tdr.Boundary import DomainBoundary
 
+from model.SimulationObject import SimulationObject
+from model.SimulationObjectFactory import createSimObject
+from model.xml_utils import isParameter
+
 
 """
     1-D only for the moment.
 """
-class Interval(object):
-    def __init__(self, a, b, *args, **kwargs):
+class Interval(SimulationObject):
+    def __init__(self, a = 0, b = 1, *args, **kwargs):
         # set the basic parameters
         self.name               = kwargs.pop('name', 'x')
         self.x0                 = a
@@ -19,6 +23,9 @@ class Interval(object):
 
         # number of patches -> in 1D always one
         self.nop                = 1
+
+        # check if we have a xml node
+        xml = kwargs.pop('xml', None)
 
         # Length parameters
         self.n                  = kwargs.pop('n', 8)
@@ -31,16 +38,56 @@ class Interval(object):
 
         self.bd                 = kwargs.pop('bd', DomainBoundary())
 
+        if xml is not None:
+            self._create_from_xml(xml, *args, **kwargs)
+
         # call reset
         self._reset()
+
+
+    """ Creation """
+    def _create_from_args(self, *args, **kwargs):
+        pass
+
+
+    def _create_from_xml(self, xml, *args, **kwargs):
+        # set name
+        setattr(self, 'name', xml.tag)
+
+        # first check if the main node has attributes
+        for name, value in xml.attrib.items():
+            setattr(self, name, value)
+
+        parameters = []
+        for child in xml:
+            p = createSimObject(child)
+            if isParameter(child):
+                parameters.append(p)
+            else:
+                assert False, 'Encountered unknown xml type %s' % child.tag
+
+        # set the objects parameters!
+        for p in parameters:
+            setattr(self, p.name, p.value)
+
+
+    """ Factory """
+    class Factory:
+        def create(self, *args, **kwargs):
+            return Interval(*args, **kwargs)
 
 
     """ Internal methods """
     def _reset(self):
         self.L                  = np.abs(self.xf - self.x0)
+        self.h                  = 1. / self.cellsPerUnitLength
         self.N                  = self.L * self.cellsPerUnitLength
         self.dX                 = asarray(self.h)
         self.x                  = self.xs()
+
+        assert self.dX > 0, 'Interval must have non-negative step size.'
+        assert self.N > 1, 'Interval N = %d must be larger than 1.' % self.N
+        assert self.L > 0, 'Interval must have non-negative length.'
 
 
     """ Public methods """

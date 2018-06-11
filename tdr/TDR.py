@@ -113,6 +113,8 @@ class TDR(object):
         self.dimensions     = 1
         self.bw             = kwargs.pop('bw', 0)
 
+        print('TDR init: ', self.version)
+
         # for easy checking of requirements
         self.haveReactionTerms      = False
         self.haveDiffusionTerms     = False
