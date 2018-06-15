@@ -28,7 +28,7 @@ class Interval(SimulationObject):
         xml = kwargs.pop('xml', None)
 
         # Length parameters
-        self.n                  = kwargs.pop('n', 8)
+        self.n                  = kwargs.pop('n', 7)
         self.cellsPerUnitLength = kwargs.pop('cellsPerUnitLength', 2**self.n)
         self.h                  = 1. / self.cellsPerUnitLength
 
