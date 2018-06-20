@@ -6,12 +6,17 @@
 from __future__ import print_function
 import numpy as np
 
+from model.SimulationObject import SimulationObject
+from model.SimulationObjectFactory import createSimObject
+from model.xml_utils import isParameter, isBoundary
+
+
 """
     Keeps information that are important about choosing a type of boundary
     condition for a face.
 """
-class Boundary(object):
-    def __init__(self, name = "Boundary", oNormal = 1.):
+class Boundary(SimulationObject):
+    def __init__(self, name = "Boundary", oNormal = 1., *args, **kwargs):
         self.name = name
 
         # TODO: is there a better way to do this?
@@ -23,8 +28,24 @@ class Boundary(object):
         # the output normal
         self.oNormal = np.asarray(oNormal)
 
+        xml = kwargs.pop('xml', None)
+        if xml is not None:
+            self._create_from_xml(xml, *args, **kwargs)
+
         # setup
         self._setup()
+
+
+    """ Factory """
+    class Factory:
+        def create(self, *args, **kwargs):
+            return Boundary(*args, **kwargs)
+
+
+    """ xml factory """
+    def _create_from_xml(self, *args, **kwargs):
+        # set name
+        setattr(self, 'name', xml.tag)
 
 
     """ private methods """
@@ -34,6 +55,7 @@ class Boundary(object):
 
 
     def _setup(self):
+        assert self.name is not "Boundary", 'Boundary type must be set!'
         self._validate()
         self.type = self.bc_lookup[self.name]
 
@@ -81,17 +103,53 @@ class Dirichlet(Boundary):
 """
 
 """ 1D only at the moment """
-class DomainBoundary(object):
+class DomainBoundary(SimulationObject):
     def __init__(self, *args, **kwargs):
         # spatial dimension
         self.dim = kwargs.pop('dim', 1)
 
-        if self.dim == 1:
-            self._setup_1d(*args, **kwargs)
-        elif self.dim == 2:
-            self._setup_2d(*args, **kwargs)
+        xml = kwargs.pop('xml', None)
+        if xml is not None:
+            self._create_from_xml(xml, *args, **kwargs)
         else:
-            assert 'DomainBoundary not implemented for %dd' % self.dim
+            if self.dim == 1:
+                self._setup_1d(*args, **kwargs)
+            elif self.dim == 2:
+                self._setup_2d(*args, **kwargs)
+            else:
+                assert 'DomainBoundary not implemented for %dd' % self.dim
+
+
+    """ Factory """
+    class Factory:
+        def create(self, *args, **kwargs):
+            return DomainBoundary(*args, **kwargs)
+
+
+    """ xml factory """
+    def _create_from_xml(self, *args, **kwargs):
+        # set name
+        setattr(self, 'name', xml.tag)
+
+        # first check if the main node has attributes
+        for name, value in xml.attrib.items():
+            setattr(self, name, value)
+
+        parameters = []
+        for child in xml:
+            p = createSimObject(child)
+            if isParameter(child):
+                parameters.append(p)
+            elif isBoundary(child):
+                attribs = child.attribs.items()
+                print('attribs:', attribs)
+            else:
+                assert False, 'Encountered unknown xml type %s' % child.tag
+
+
+        # set the objects parameters!
+        for p in parameters:
+            setattr(self, p.name, p.value)
 
 
     """ setup methods """

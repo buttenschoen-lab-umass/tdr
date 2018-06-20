@@ -127,6 +127,10 @@ class Interval(SimulationObject):
         return self.__repr__()
 
 
+    def getIndex(self, value):
+        return np.where((self.x>value-0.5*self.dX[0])&(self.x<value+0.5*self.dX[0]))[0][0]
+
+
 """
     2-D square.
 """
