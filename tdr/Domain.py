@@ -8,7 +8,7 @@ from tdr.Boundary import DomainBoundary
 
 from model.SimulationObject import SimulationObject
 from model.SimulationObjectFactory import createSimObject
-from model.xml_utils import isParameter
+from model.xml_utils import isParameter, isDomainBoundary
 
 
 """
@@ -63,6 +63,8 @@ class Interval(SimulationObject):
             p = createSimObject(child)
             if isParameter(child):
                 parameters.append(p)
+            elif isDomainBoundary(child):
+                self.bd = p
             else:
                 assert False, 'Encountered unknown xml type %s' % child.tag
 

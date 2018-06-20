@@ -7,7 +7,7 @@ from __future__ import print_function
 import numpy as np
 
 from model.SimulationObject import SimulationObject
-from model.SimulationObjectFactory import createSimObject
+from model.SimulationObjectFactory import createSimObject, createSimObjectByName
 from model.xml_utils import isParameter, isBoundary
 
 
@@ -43,9 +43,9 @@ class Boundary(SimulationObject):
 
 
     """ xml factory """
-    def _create_from_xml(self, *args, **kwargs):
+    def _create_from_xml(self, xml, *args, **kwargs):
         # set name
-        setattr(self, 'name', xml.tag)
+        setattr(self, 'name', kwargs.pop('type', 'Periodic'))
 
 
     """ private methods """
@@ -58,6 +58,7 @@ class Boundary(SimulationObject):
         assert self.name is not "Boundary", 'Boundary type must be set!'
         self._validate()
         self.type = self.bc_lookup[self.name]
+        print('Registered %s boundary.' % self.name)
 
 
     def __str__(self):
@@ -86,10 +87,22 @@ class Periodic(Boundary):
         super(Periodic, self).__init__(name = "Periodic")
 
 
+    """ Factory """
+    class Factory:
+        def create(self, *args, **kwargs):
+            return Periodic(*args, **kwargs)
+
+
 class Neumann(Boundary):
     def __init__(self, oNormal, value = 0.):
         super(Neumann, self).__init__(name = "Neumann", oNormal = oNormal)
         self.value = value
+
+
+    """ Factory """
+    class Factory:
+        def create(self, *args, **kwargs):
+            return Neumann(*args, **kwargs)
 
 
 class Dirichlet(Boundary):
@@ -127,7 +140,7 @@ class DomainBoundary(SimulationObject):
 
 
     """ xml factory """
-    def _create_from_xml(self, *args, **kwargs):
+    def _create_from_xml(self, xml, *args, **kwargs):
         # set name
         setattr(self, 'name', xml.tag)
 
@@ -141,8 +154,8 @@ class DomainBoundary(SimulationObject):
             if isParameter(child):
                 parameters.append(p)
             elif isBoundary(child):
-                attribs = child.attribs.items()
-                print('attribs:', attribs)
+                attributes = child.attrib
+                setattr(self, attributes['where'], p)
             else:
                 assert False, 'Encountered unknown xml type %s' % child.tag
 
