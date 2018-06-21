@@ -138,8 +138,8 @@ class Interval(SimulationObject):
 
     def getIndex(self, value):
         new_value = int(value / self.dX[0])
-        if new_value >= self.N:
-            new_value -= self.N
+        #if new_value >= self.N:
+        #    new_value -= self.N
 
         #try:
         #    idx = np.where((self.x>=value-0.5*self.dX[0])&(self.x<=value+0.5*self.dX[0]))[0][0]
@@ -149,8 +149,8 @@ class Interval(SimulationObject):
         #    print('value:', value + 2.*np.pi, ' idx:', idx, ' nidx:', new_value, ' dx:', self.dX[0])
         #    idx = idx[0][0]
 
-        print('value:', value, ' nidx:', int(new_value))
-        return int(new_value)
+        #print('value:', value, ' nidx:', int(new_value))
+        return int(new_value) % int(self.N)
 
 
 """
