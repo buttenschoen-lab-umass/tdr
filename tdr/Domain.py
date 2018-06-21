@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Author: Andreas Buttenschoen
+from __future__ import print_function, division
 
 import numpy as np
 from tdr.utils import asarray, round_to_nearest_fraction
@@ -28,7 +29,7 @@ class Interval(SimulationObject):
         xml = kwargs.pop('xml', None)
 
         # Length parameters
-        self.n                  = kwargs.pop('n', 7)
+        self.n                  = kwargs.pop('n', 6)
         self.cellsPerUnitLength = kwargs.pop('cellsPerUnitLength', 2**self.n)
         self.h                  = 1. / self.cellsPerUnitLength
 
@@ -39,6 +40,7 @@ class Interval(SimulationObject):
         self.bd                 = kwargs.pop('bd', DomainBoundary())
 
         if xml is not None:
+            print('Creating Interval from xml!')
             self._create_from_xml(xml, *args, **kwargs)
 
         # call reset
@@ -129,8 +131,26 @@ class Interval(SimulationObject):
         return self.__repr__()
 
 
+    """ Mainly for the parsing functions """
+    def __call__(self):
+        return self.x
+
+
     def getIndex(self, value):
-        return np.where((self.x>value-0.5*self.dX[0])&(self.x<value+0.5*self.dX[0]))[0][0]
+        new_value = int(value / self.dX[0])
+        if new_value >= self.N:
+            new_value -= self.N
+
+        #try:
+        #    idx = np.where((self.x>=value-0.5*self.dX[0])&(self.x<=value+0.5*self.dX[0]))[0][0]
+        #except IndexError:
+        #    value -= 2. * np.pi
+        #    idx = np.where((self.x>=value-0.5*self.dX[0])&(self.x<=value+0.5*self.dX[0]))
+        #    print('value:', value + 2.*np.pi, ' idx:', idx, ' nidx:', new_value, ' dx:', self.dX[0])
+        #    idx = idx[0][0]
+
+        print('value:', value, ' nidx:', int(new_value))
+        return int(new_value)
 
 
 """
