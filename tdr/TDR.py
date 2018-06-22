@@ -164,6 +164,9 @@ class TDR(object):
         if np.any(np.isnan(y)):
             raise ValueError("Encountered NaN in TDR update at time: %.4g" % t)
 
+        if np.any(y < 0.):
+            raise ValueError("Encountered non-positive values in TDR update at time: %.4g" % t)
+
         if np.any(np.abs(y) > 1.e5):
             raise ValueError("Encountered too large values in TDR update at time: %.4g" % t)
 
