@@ -42,33 +42,84 @@ from scipy.fftpack import fft, ifft
 
 """
 class NonLocalGradient:
-    def __init__(self, h, L, N2, R = 1.):
-        self.h = h
-        self.L = L
-        self.N1 = 0
-        self.N1ext = 0
-        self.N2 = np.asscalar(N2)
+    def __init__(self, h, L, N2, R = 1., *args, **kwargs):
+        self.h      = h
+        self.L      = L
+        self.R      = R
+        self.M      = np.ceil(self.R / self.h).astype(int)
+        self.N2     = int(N2)
+        self.N1ext  = self.N2
+        self.N1     = self.N2
 
-        self.R = R
-        self.NR = max(1000, np.round(self.N2 * self.R).flatten())
+        # check that the domain is sufficiently large!
+        assert 2. * self.R < self.L, 'The domain size must be twice as large as the sensing radius!'
 
-        self.M = np.ceil(self.R / self.h).astype(int)
-        self.lm = self.M
-        self.lp = self.M + 1
+        self.NR     = max(1000, np.round(self.N2 * self.R).flatten())
+        self.hr     = 1. / self.NR
+
+        self.lm     = self.M
+        self.lp     = self.M + 1
 
         self.weights = None
         self.circ    = None
         self.circFFT = None
 
-        print('Init non-local gradient')
-        self._init_weights()
-        self._init_bcs()
-        print('Non-local gradient ready!')
+        self.mode    = kwargs.pop('mode', 'periodic')
+
+        """ Compute integration weights """
+        self._init()
 
 
     """ Functor """
     def __call__(self, u):
-        return self._eval(u)[0]
+        return self._eval(u)
+
+
+    """ Periodic evaluation """
+    def _eval_pp(self, u):
+        return ifft(np.tile(self.circFFT, (1, 1)) * fft(u))[0]
+
+
+    """ No-flux evaluation """
+    def _eval_noflux(self, u):
+        return np.dot(self.circ, u)
+
+
+    """ Initialization """
+    def _init(self):
+        self._init_weights()
+        self._init_bcs()
+
+
+    """ Define the boundary interaction functions for no-flux bcs """
+    def _init_no_flux(self):
+        pass
+
+
+    def _init_weights(self):
+        if self.mode == 'periodic':
+            print('Computing integration weights for periodic bcs.')
+            self._init_weights_periodic()
+        elif self.mode == 'no-flux':
+            print('Computing integration weights for no-flux bcs.')
+            self._init_weights_noflux()
+        elif self.mode == 'no-flux-reflect':
+            assert False, 'Unknown non-local gradient mode %s.' % self.mode
+        elif self.mode == 'weakly-adhesive':
+            assert False, 'Unknown non-local gradient mode %s.' % self.mode
+        else:
+            assert False, 'Unknown non-local gradient mode %s.' % self.mode
+
+
+    def _init_bcs(self):
+        if self.mode == 'periodic':
+            self._init_bcs_periodic()
+            self._eval = self._eval_pp
+        elif self.mode == 'no-flux':
+            self._init_bcs_noflux()
+            self._eval = self._eval_noflux
+        else:
+            assert False, 'Unknown non-local gradient mode %s.' % self.mode
 
 
     """ Implementation details """
@@ -76,7 +127,16 @@ class NonLocalGradient:
         return ((x - xi) / self.h - l < lower) or ((x - xi) / self.h - l > upper)
 
 
-    def _init_weights(self):
+    """ """
+    def _integration_kernel(self):
+        OmegaM = lambda r : (-1. / (2. * self.R)) * (np.abs(r) <= self.R)
+        OmegaP = lambda r : ( 1. / (2. * self.R)) * (np.abs(r) <= self.R)
+        int_kernel = lambda r : np.piecewise(r, [r < 0., r > 0.], [lambda r : OmegaM(r), lambda r : OmegaP(r)])
+        return int_kernel
+
+
+    """ Periodic implementation """
+    def _init_weights_periodic(self):
         """
             This function computes the integration weights using a midpoint
             composite using the formula presented in section 3.1.3 of Gerisch
@@ -100,48 +160,114 @@ class NonLocalGradient:
                 assert False, 'r is %.2g!. This shouldnt happen' % r
 
             x = xi + 0.5 * self.h + r
+            # compute l1
             l1 = np.floor((x - xi) / self.h).astype(int)
             if self._check_guess(x, xi, l1):
                 l1 -= 1
 
-            if self._check_guess(x, xi, l1):
-                assert False, 'Error l1'
+            assert not self._check_guess(x, xi, l1), 'NonLocalGradient weights.  Error l1!'
 
+            # compute l2
             l2 = l1 + 1
-            if self._check_guess(x, xi, l1, lower = -1., upper = 1.):
-                assert False, 'Error l1.2'
-            if self._check_guess(x, xi, l2, lower = -1., upper = 1.):
-                assert False, 'Error l2'
+            assert not self._check_guess(x, xi, l1, lower=-1., upper=1.), 'NonLocalGradient weights.  Error l1.2!'
+            assert not self._check_guess(x, xi, l2, lower=-1., upper=1.), 'NonLocalGradient weights.  Error l2!'
 
             Phi1x = 1. - np.abs(x - xi - l1 * self.h) / self.h
             Phi2x = 1. - np.abs(x - xi - l2 * self.h) / self.h
 
-            if np.abs(j) == self.NR:
-                fac = 0.5
-            else:
-                fac = 1.
+            fac = 0.5 if np.abs(j) == self.NR else 1.
 
             self.weights[l1 + self.lm] += fac * Phi1x * Omegar
             self.weights[l2 + self.lm] += fac * Phi2x * Omegar
 
-        self.weights /= self.NR
+        self.weights *= self.hr
 
 
-    def _init_bcs(self):
+    def _init_bcs_periodic(self):
         # only supports pp atm
         self.circ = np.concatenate((self.weights[self.lm::-1],
                                np.zeros(self.N2 - self.weights.size),
                                self.weights[:self.lm:-1]))
 
-        self.N1ext = self.N2
-        self.N1 = self.N2
-        self.circFFT = fft(self.circ)
+        self.circFFT    = fft(self.circ)
 
 
-    def _eval(self, u):
-        return ifft(np.tile(self.circFFT, (1, 1)) * fft(u))
+    """ No-flux implementation """
+    def _get_indices(self, x):
+        R = self.R
+        L = self.L
+
+        # interaction with the boundary!
+        f1 = lambda x : np.piecewise(x, [x < R,     x >= R],   [lambda x : R - 2. * x, -R])
+        f2 = lambda x : np.piecewise(x, [x < L - R, x >= L-R], [R, lambda x : 2. * L - R - 2. * x])
+
+        lowerIntLimit = np.floor(f1(x) / self.hr).astype(int)
+        upperIntLimit = np.floor(f2(x) / self.hr).astype(int)
+
+        idxs = None
+        if x < 0.5 * R:
+            idxs = np.arange(max(1, lowerIntLimit), self.NR + 1, 1)
+        elif x > L - 0.5 * R:
+            idxs = np.arange(lowerIntLimit, upperIntLimit + 1, 1)
+        else:
+            idxs = np.concatenate((np.arange(lowerIntLimit, 0, 1), np.arange(1, upperIntLimit + 1, 1)))
+
+        return idxs.astype(int)
 
 
+    def _init_weights_noflux(self):
+        self.weights = np.zeros((self.N1, self.lm + self.lp + 1))
+        xi = (self.lm + 4.5) * self.h
 
+        # get all the x indices
+        x_idxs = np.arange(0, self.N1, 1)
+        for i in x_idxs:
+            xk = (i/self.N1) * self.L
+
+            # integration indices
+            idxs = self._get_indices(xk)
+
+            int_kernel = self._integration_kernel()
+            for j in idxs:
+                r = (j/self.NR) * self.R
+                assert r != 0., 'NonLocalGradient weights r cannot be zero!'
+                Omegar = int_kernel(r)
+
+                x = xi + 0.5 * self.h + r
+                # compute l1
+                l1 = np.floor((x - xi) / self.h).astype(int)
+                if self._check_guess(x, xi, l1):
+                    l1 -= 1
+
+                assert not self._check_guess(x, xi, l1), 'NonLocalGradient weights.  Error l1!'
+
+                # compute l2
+                l2 = l1 + 1
+                assert not self._check_guess(x, xi, l1, lower=-1., upper=1.), 'NonLocalGradient weights.  Error l1.2!'
+                assert not self._check_guess(x, xi, l2, lower=-1., upper=1.), 'NonLocalGradient weights.  Error l2!'
+
+                Phi1x = 1. - np.abs(x - xi - l1 * self.h) / self.h
+                Phi2x = 1. - np.abs(x - xi - l2 * self.h) / self.h
+
+                fac = 0.5 if np.abs(j) == self.NR else 1.
+
+                #print('x:', xk,' r:', r,' Omegar:', Omegar)
+                self.weights[i, l1 + self.lm] += fac * Phi1x * Omegar
+                self.weights[i, l2 + self.lm] += fac * Phi2x * Omegar
+
+        self.weights *= self.hr
+
+
+    def _init_bcs_noflux(self):
+        NSO2    = int(self.R / self.L * self.N1 + 1)
+        NC      = self.N1 + 2 * NSO2
+        circ    = np.zeros((NC, NC))
+
+        # get all the x indices
+        x_idxs = np.arange(0, self.N1, 1)
+        for i in x_idxs:
+            circ[i + NSO2, i:i+2 * NSO2] = self.weights[i, :]
+
+        self.circ = circ[NSO2:-NSO2, NSO2:-NSO2]
 
 

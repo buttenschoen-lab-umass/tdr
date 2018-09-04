@@ -56,13 +56,14 @@ class Patch(object):
 
         # TODO: Solve this more elegantly
         if nonLocal and (self.ngb.left.name != 'Periodic' or self.ngb.right.name != 'Periodic'):
-            assert False, 'Non-local equation can only be solved on a periodic domain!'
+            print('WARNING: Non-local equation solving is not stable on non periodic domain!')
+            #assert False, 'Non-local equation can only be solved on a periodic domain!'
 
         self.patchId = patchId
         # TODO set DEPRECATE ONE!
-        self.boundaryWidth = boundaryWidth
-        self.bW            = boundaryWidth
-        self.nonLocalGradient = None
+        self.boundaryWidth      = boundaryWidth
+        self.bW                 = boundaryWidth
+        self.nonLocalGradient   = None
 
         # data for the patch
         self.data = None
