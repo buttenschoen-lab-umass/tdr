@@ -54,14 +54,16 @@ class NonLocalGradient:
         # check that the domain is sufficiently large!
         assert 2. * self.R < self.L, 'The domain size must be twice as large as the sensing radius!'
 
-        self.NR     = max(1000, np.round(self.N2 * self.R).flatten())
+        self.NR     = max(1000, np.round(self.N2 * self.R).astype(int).flatten())
         self.hr     = 1. / self.NR
 
         self.lm     = self.M
         self.lp     = self.M + 1
 
         self.weights = None
+        # use for non pp bc
         self.circ    = None
+        # use for pp bc
         self.circFFT = None
 
         self.mode    = kwargs.pop('mode', 'periodic')
@@ -82,7 +84,16 @@ class NonLocalGradient:
 
     """ No-flux evaluation """
     def _eval_noflux(self, u):
-        return np.dot(self.circ, u)
+        # hmm u has shape (1, N)
+        u = u[0]
+        bw = 2*self.M
+        #print('u:', u.shape, ' M:', self.M,' bw:',bw)
+        z = ifft(np.tile(self.circFFT, (1, 1)) * fft(u))[0]
+        z[:self.M]  = np.dot(self.circ,          u[:bw])[0:self.M]
+        u_rhs = u[-bw:]
+        rhs = -np.dot(self.circ, u_rhs[::-1])[:self.M]
+        z[-self.M:] = rhs[::-1]
+        return z
 
 
     """ Initialization """
@@ -102,9 +113,11 @@ class NonLocalGradient:
             self._init_weights_periodic()
         elif self.mode == 'no-flux':
             print('Computing integration weights for no-flux bcs.')
+            self._init_weights_periodic()
             self._init_weights_noflux()
         elif self.mode == 'no-flux-reflect':
-            assert False, 'Unknown non-local gradient mode %s.' % self.mode
+            print('Computing integration weights for no-flux reflect bcs.')
+            self._init_weights_periodic()
         elif self.mode == 'weakly-adhesive':
             assert False, 'Unknown non-local gradient mode %s.' % self.mode
         else:
@@ -118,6 +131,9 @@ class NonLocalGradient:
         elif self.mode == 'no-flux':
             self._init_bcs_noflux()
             self._eval = self._eval_noflux
+        elif self.mode == 'no-flux-reflect':
+            self._eval = self._eval_pp
+            self._init_bcs_periodic()
         else:
             assert False, 'Unknown non-local gradient mode %s.' % self.mode
 
@@ -185,11 +201,8 @@ class NonLocalGradient:
 
     def _init_bcs_periodic(self):
         # only supports pp atm
-        self.circ = np.concatenate((self.weights[self.lm::-1],
-                               np.zeros(self.N2 - self.weights.size),
-                               self.weights[:self.lm:-1]))
-
-        self.circFFT    = fft(self.circ)
+        circ = np.concatenate((self.weights[self.lm::-1], np.zeros(self.N2 - self.weights.size), self.weights[:self.lm:-1]))
+        self.circFFT    = fft(circ)
 
 
     """ No-flux implementation """
@@ -216,11 +229,11 @@ class NonLocalGradient:
 
 
     def _init_weights_noflux(self):
-        self.weights = np.zeros((self.N1, self.lm + self.lp + 1))
+        self.weights_bc = np.zeros((self.M, self.lm + self.lp + 1))
         xi = (self.lm + 4.5) * self.h
 
         # get all the x indices
-        x_idxs = np.arange(0, self.N1, 1)
+        x_idxs = np.arange(0, self.M, 1)
         for i in x_idxs:
             xk = (i/self.N1) * self.L
 
@@ -252,21 +265,29 @@ class NonLocalGradient:
                 fac = 0.5 if np.abs(j) == self.NR else 1.
 
                 #print('x:', xk,' r:', r,' Omegar:', Omegar)
-                self.weights[i, l1 + self.lm] += fac * Phi1x * Omegar
-                self.weights[i, l2 + self.lm] += fac * Phi2x * Omegar
+                self.weights_bc[i, l1 + self.lm] += fac * Phi1x * Omegar
+                self.weights_bc[i, l2 + self.lm] += fac * Phi2x * Omegar
 
-        self.weights *= self.hr
+        self.weights_bc *= self.hr
 
 
     def _init_bcs_noflux(self):
-        NSO2    = int(self.R / self.L * self.N1 + 1)
-        NC      = self.N1 + 2 * NSO2
+        # the middle of the domain part
+        circ = np.concatenate((self.weights[self.lm::-1], np.zeros(self.N2 - self.weights.size), self.weights[:self.lm:-1]))
+        self.circFFT    = fft(circ)
+
+        # deal with the boundary weights
+        NSO2    = int(self.M + 1)
+        NC      = int(2 * self.M + 2 * NSO2)
+        #print("NC:", NC, " NSO2:", NSO2)
+
+        # now create a matrix we can multiply with
         circ    = np.zeros((NC, NC))
 
         # get all the x indices
-        x_idxs = np.arange(0, self.N1, 1)
+        x_idxs = np.arange(0, self.M, 1)
         for i in x_idxs:
-            circ[i + NSO2, i:i+2 * NSO2] = self.weights[i, :]
+            circ[i + NSO2, i:i+2 * NSO2] = self.weights_bc[i, :]
 
         self.circ = circ[NSO2:-NSO2, NSO2:-NSO2]
 

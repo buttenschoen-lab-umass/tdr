@@ -45,7 +45,6 @@ class Patch(object):
     """
     def __init__(self, n, patchId, x0, dX, N, boundaryWidth = 0, nonLocal=False, **kwargs):
         #print('Creating patch: %d, origin: %s, dX: %s, N: %s.' % (patchId, x0, dX, N))
-
         self.x0  = x0
         self.N   = N
         self.n   = n
@@ -53,11 +52,6 @@ class Patch(object):
         self.dX  = dX
         self.ngb = kwargs.pop('ngb', DomainBoundary(self.dim))
         self.shape = self.N * self.dX
-
-        # TODO: Solve this more elegantly
-        if nonLocal and (self.ngb.left.name != 'Periodic' or self.ngb.right.name != 'Periodic'):
-            print('WARNING: Non-local equation solving is not stable on non periodic domain!')
-            #assert False, 'Non-local equation can only be solved on a periodic domain!'
 
         self.patchId = patchId
         # TODO set DEPRECATE ONE!
@@ -163,8 +157,24 @@ class Patch(object):
                          self.dim, ngb = self.ngb)
 
 
+    """ Non-local term special setup """
+    def _nonlocal_mode(self):
+        assert self.ngb.left.name == self.ngb.right.name, \
+                'Different boundary conditions are not supported for the non-local term!'
+
+        if self.ngb.left.name == 'Periodic':
+            return 'periodic'
+        # TODO differentiate between the different types of no-flux bc
+        elif self.ngb.left.name == 'Neumann':
+            return 'no-flux'
+        else:
+            assert False, 'Unknown boundary type %s!' % self.ngb.left.name
+
+
     def _setup_nonlocal(self):
         assert self.dX.size == 1, 'not implemented'
-        self.nonLocalGradient = NonLocalGradient(self.dX[0], self.shape[0], self.N[0])
+        mode = self._nonlocal_mode()
+        self.nonLocalGradient = NonLocalGradient(self.dX[0], self.shape[0],
+                                                 self.N[0], mode=mode)
 
 

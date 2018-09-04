@@ -31,6 +31,7 @@ class Interval(SimulationObject):
         # Length parameters
         self.n                  = kwargs.pop('n', 6)
         self.cellsPerUnitLength = kwargs.pop('cellsPerUnitLength', 2**self.n)
+        self.M                  = self.cellsPerUnitLength
         self.h                  = 1. / self.cellsPerUnitLength
 
         # for plotting
