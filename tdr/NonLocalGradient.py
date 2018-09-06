@@ -292,3 +292,85 @@ class NonLocalGradient:
         self.circ = circ[NSO2:-NSO2, NSO2:-NSO2]
 
 
+    """ Weakly adhesive no-flux implementation """
+    def _get_indices_naive(self, x):
+        R = self.R
+        L = self.L
+
+        # interaction with the boundary!
+        f1 = lambda x : np.piecewise(x, [x < R,     x >= R],   [lambda x : -x, -R])
+        f2 = lambda x : np.piecewise(x, [x < L - R, x >= L-R], [R, lambda x : L - x])
+
+        lowerIntLimit = np.floor(f1(x) / self.hr).astype(int)
+        upperIntLimit = np.floor(f2(x) / self.hr).astype(int)
+
+        # TODO test this
+        idxs = np.concatenate((np.arange(lowerIntLimit, 0, 1), np.arange(1, upperIntLimit + 1, 1)))
+
+        return idxs.astype(int)
+
+
+    def _init_weights_weakly_adhesive(self):
+        self.weights_bc = np.zeros((self.M, self.lm + self.lp + 1))
+        xi = (self.lm + 4.5) * self.h
+
+        # get all the x indices
+        x_idxs = np.arange(0, self.M, 1)
+        for i in x_idxs:
+            xk = (i/self.N1) * self.L
+
+            # integration indices
+            idxs = self._get_indices_naive(xk)
+
+            int_kernel = self._integration_kernel()
+            for j in idxs:
+                r = (j/self.NR) * self.R
+                assert r != 0., 'NonLocalGradient weights r cannot be zero!'
+                Omegar = int_kernel(r)
+
+                x = xi + 0.5 * self.h + r
+                # compute l1
+                l1 = np.floor((x - xi) / self.h).astype(int)
+                if self._check_guess(x, xi, l1):
+                    l1 -= 1
+
+                assert not self._check_guess(x, xi, l1), 'NonLocalGradient weights.  Error l1!'
+
+                # compute l2
+                l2 = l1 + 1
+                assert not self._check_guess(x, xi, l1, lower=-1., upper=1.), 'NonLocalGradient weights.  Error l1.2!'
+                assert not self._check_guess(x, xi, l2, lower=-1., upper=1.), 'NonLocalGradient weights.  Error l2!'
+
+                Phi1x = 1. - np.abs(x - xi - l1 * self.h) / self.h
+                Phi2x = 1. - np.abs(x - xi - l2 * self.h) / self.h
+
+                fac = 0.5 if np.abs(j) == self.NR else 1.
+
+                #print('x:', xk,' r:', r,' Omegar:', Omegar)
+                self.weights_bc[i, l1 + self.lm] += fac * Phi1x * Omegar
+                self.weights_bc[i, l2 + self.lm] += fac * Phi2x * Omegar
+
+        self.weights_bc *= self.hr
+
+
+    def _init_bcs_weakly_adhesive(self):
+        # the middle of the domain part
+        circ = np.concatenate((self.weights[self.lm::-1], np.zeros(self.N2 - self.weights.size), self.weights[:self.lm:-1]))
+        self.circFFT    = fft(circ)
+
+        # deal with the boundary weights
+        NSO2    = int(self.M + 1)
+        NC      = int(2 * self.M + 2 * NSO2)
+        #print("NC:", NC, " NSO2:", NSO2)
+
+        # now create a matrix we can multiply with
+        circ    = np.zeros((NC, NC))
+
+        # get all the x indices
+        x_idxs = np.arange(0, self.M, 1)
+        for i in x_idxs:
+            circ[i + NSO2, i:i+2 * NSO2] = self.weights_bc[i, :]
+
+        self.circ = circ[NSO2:-NSO2, NSO2:-NSO2]
+
+
