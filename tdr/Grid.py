@@ -9,7 +9,7 @@ from tdr.utils import expand_dims
 
 
 class Grid(object):
-    def __init__(self, n, grd, dim, bw = 0, nonLocal=False):
+    def __init__(self, n, grd, dim, bw = 0, nonLocal=False, *args, **kwargs):
         # number of concentration fields
         self.n = n
 
@@ -35,7 +35,7 @@ class Grid(object):
         self.pe = {}
 
         # setup
-        self._setup(grd, nonLocal)
+        self._setup(grd, nonLocal, *args, **kwargs)
 
 
     """ Public methods """
@@ -104,13 +104,16 @@ class Grid(object):
         return self.patches[key]
 
 
-    def _setup(self, grd, nonLocal):
-        self._init_patches(grd, nonLocal)
+    """ Setup any required internal data structures """
+    def _setup(self, grd, nonLocal, *args, **kwargs):
+        self._init_patches(grd, nonLocal, *args, **kwargs)
+
+        # Setup internal data structures
         self._compute_size()
         self._compute_cellCenter()
 
 
-    def _init_patches(self, grd, nonLocal):
+    def _init_patches(self, grd, nonLocal, *args, **kwargs):
         nop = grd['nop']
         ngb = grd['ngb']
         dX  = grd['dX']
@@ -128,7 +131,8 @@ class Grid(object):
             self.patches[i] = Patch(self.n, i + 1, x0[i], dX[i], N[i],
                                     ngb             = ngb[i],
                                     boundaryWidth   = self.boundaryWidth,
-                                    nonLocal        = nonLocal)
+                                    nonLocal        = nonLocal,
+                                    *args, **kwargs)
 
             # TODO make more general!
             self.ps[i] = 0
