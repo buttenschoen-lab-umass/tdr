@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Author: Andreas Buttenschoen
-from __future__ import print_function
+from __future__ import print_function, division
 
 import numpy as np
 
@@ -16,9 +16,10 @@ class TaxisFlux(Flux):
         self._taxisCall = None
         self._adhCall   = None
         self._finish    = None
+        self._bc_call   = None
 
         # Call parent constructor
-        super(TaxisFlux, self).__init__(noPDEs, dimensions, transitionMatrix)
+        super(TaxisFlux, self).__init__(noPDEs, dimensions, transitionMatrix, *args, **kwargs)
 
         # extra vars for Taxis Flux
         self.velNonZero = False
@@ -26,7 +27,7 @@ class TaxisFlux(Flux):
         self.transAdh   = transitionMatrixAdhesion
 
         # set priority
-        self.priority   = 20
+        self._priority   = 20
 
 
     """ Setup """
@@ -35,6 +36,12 @@ class TaxisFlux(Flux):
             self._taxisCall = self._flux_1d
             self._adhCall   = self._adh_flux_1d
             self._finish    = self._finish_1d
+
+            if self.bd.isNoFlux():
+                self._bc_call = self._noflux_bc_1d
+            else:
+                self._bc_call = self._dummy_bc_1d
+
         elif self.dim == 2:
             self._taxisCall = self._flux_2d
             self._adhCall   = self._dummy_flux
@@ -42,9 +49,12 @@ class TaxisFlux(Flux):
         else:
             assert False, 'At the moment we only support 1D and 2D simulations.'
 
+        # TODO: improve get rid of all the todos in simple_call
+        self.call = self._simple_call
 
-    """ i: is the number of PDE """
-    def __call__(self, patch):
+
+    """ Call function """
+    def _simple_call(self, patch):
         # compute the flux for each of the PDEs
         # TODO: test
         bw = patch.boundaryWidth
@@ -168,11 +178,27 @@ class TaxisFlux(Flux):
         # compute approximation for negative velocities
         taxisApprox += (ui_p1 - 0.5 * self.limiter(r) * fwd2) * (self.vij<0) * self.vij
 
+        # Add any boundary modifications that are required
+        self._bc_call(i, patch, taxisApprox)
+
         # Now compute HT
         patch.data.ydot[i, :] -= (1. / patch.step_size()) * \
                 (taxisApprox[1:] - taxisApprox[:-1])
 
 
+    """ Add any modifications required by boundary conditions """
+    def _dummy_bc_1d(self, i, patch, taxisApprox):
+        pass
+
+
+    """ Modifications required for no-flux bc """
+    def _noflux_bc_1d(self, i, patch, taxisApprox):
+        # TODO: Deal with zero diffusion constants etc.
+        taxisApprox[[0, -1]] = patch.data.get_bd_taxis(i, self.vij[[0, -1]])
+        return
+
+
+    """ 2D implementation """
     def _finish_2d(self, i, patch):
         bw = patch.boundaryWidth
         y  = patch.data.y[i, :]

@@ -1,51 +1,45 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Author: Andreas Buttenschoen
+from __future__ import print_function, division
 
 from tdr.Flux import Flux
 
+import numpy as np
+
 
 class DiffusionFlux(Flux):
-    def __init__(self, noPDEs, dimensions, transitionMatrix):
-        super(DiffusionFlux, self).__init__(noPDEs, dimensions, transitionMatrix)
+    def __init__(self, noPDEs, dimensions, transitionMatrix, *args, **kwargs):
+        super(DiffusionFlux, self).__init__(noPDEs, dimensions, transitionMatrix, *args, **kwargs)
 
         # set priority
-        self.priority = 10
+        self._priority  = 10
 
 
-    """ i: is the number of PDE """
-    def __call__(self, patchData):
+    """ internal call """
+    def __call__(self, patch):
         for i in range(self.n):
-            self._switchBoardNew(i, patchData)
-            # Dont seem to needs this any longer!
-            # self._flux_1d_periodic(i, patchData)
+            self.call(i, patch)
 
 
-    def _switchBoard(self, i, patchData):
-        # TODO optimize?
-        bd = patchData.ngb
+    """ setup the flux """
+    def _setup(self):
         if self.dim == 1:
-            if bd.isPeriodic():
-                self._flux_1d_periodic(i, patchData)
-            elif bd.isNeumann():
-                self._flux_1d_neumann(i, patchData)
-            elif bd.isDirichlet():
-                self._flux_1d_dirichlet(i, patchData)
+            if self.bd.isPeriodic():
+                self.call = self._flux_1d_periodic
+            elif self.bd.isNeumann():
+                # This only works for zero flux bc i.e. Neumann
+                self.call = self._flux_1d_periodic
+            elif self.bd.isNoFlux():
+                self.call = self._flux_1d_noflux
+            elif self.bd.isDirichlet():
+                self.call = self._flux_1d_dirichlet
             else:
-                assert False, 'Unknown boundary condition!'
+                assert False, 'Unknown boundary condition %s!' % self.bd
         elif self.dim == 2:
-            self._flux_2d_periodic(i, patchData)
+            self.call = self._flux_2d_periodic
         else:
-            assert False, 'Not implemented for dimensions larger than 2!'
-
-
-    def _switchBoardNew(self, i, patchData):
-        if self.dim == 1:
-            self._flux_1d_periodic(i, patchData)
-        elif self.dim == 2:
-            self._flux_2d_periodic(i, patchData)
-        else:
-            assert False, 'Not implemented for dimensions larger than 2!'
+            assert False, 'Diffusion Flux not implemented for dimension %d.' % self.dim
 
 
     """ Computational details: The functions compute H_D(U, i). """
@@ -58,6 +52,25 @@ class DiffusionFlux(Flux):
         patch.data.ydot[i, :] += Hd
 
 
+    def _flux_1d_noflux(self, i, patch):
+        pii   = self.trans[i, i]
+        uDx   = patch.data.uDx[i, :]
+
+        # get bd corrections
+        uDx[[0, -1]] = patch.data.get_bd_diffusion(i)
+
+        # call ghost point updater
+        coefficient = (patch.step_size() / pii) * np.array([-1, 1])
+        patch.data.update_ghost_points_noflux(i, coefficient)
+
+        # compute Hd
+        Hd      = (pii / patch.step_size()) * (uDx[1:] - uDx[:-1])
+
+        # set ydot in data
+        patch.data.ydot[i, :] += Hd
+
+
+    """ 2D - Implementation """
     def _flux_2d_periodic(self, i, patch):
         pii   = self.trans[i, i]
         uDx   = patch.data.uDx[i, :]
@@ -67,25 +80,4 @@ class DiffusionFlux(Flux):
 
         # set ydot in data
         patch.data.ydot[i, :, :] += xdiff + ydiff
-
-
-    def _flux_1d_neumann(self, i, patch):
-        pii   = self.trans[i, i]
-        uDx   = patch.data.uDx[i, :]
-
-        #print('uDx:', uDx)
-
-        # Since we have neumann boundary conditions set the left and right
-        # point of uDx
-        #lB      = patch.ngb.left
-        #rB      = patch.ngb.right
-        #uDx[1]  = - lB.oNormal * lB.value
-        #uDx[-1] = - rB.oNormal * rB.value
-
-        #print('after: uDx:', uDx)
-
-        Hd      = (pii / patch.step_size()) * (uDx[1:] - uDx[:-1])
-
-        # set ydot in data
-        patch.data.ydot[i, :] += Hd
 
