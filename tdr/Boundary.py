@@ -230,6 +230,15 @@ class DomainBoundary(SimulationObject):
             yield bd
 
 
+    """ String """
+    def __str__(self):
+        return "DomainBoundary"
+
+
+    def __repr__(self):
+        return "DomainBoundary"
+
+
     """ public methods """
     # TODO: atm we can't deal with different boundary conditions on either side
     def isPeriodic(self):
@@ -238,6 +247,10 @@ class DomainBoundary(SimulationObject):
 
     def isNeumann(self):
         return self.left.isNeumann() and self.right.isNeumann()
+
+
+    def isNoFlux(self):
+        return self.left.isNoFlux() and self.right.isNoFlux()
 
 
     def isDirichlet(self):
