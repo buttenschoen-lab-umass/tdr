@@ -51,6 +51,9 @@ class NonLocalGradient:
         self.N1ext  = self.N2
         self.N1     = self.N2
 
+        self.beta0  = kwargs.pop('beta0', 0.)
+        self.betaL  = kwargs.pop('betaL', 0.)
+
         # check that the domain is sufficiently large!
         assert 2. * self.R < self.L, 'The domain size must be twice as large as the sensing radius!'
 
@@ -66,6 +69,7 @@ class NonLocalGradient:
         # use for pp bc
         self.circFFT = None
 
+        # the non-local operator mode
         self.mode    = kwargs.pop('mode', 'periodic')
 
         """ Compute integration weights """
@@ -82,6 +86,7 @@ class NonLocalGradient:
         return ifft(np.tile(self.circFFT, (1, 1)) * fft(u))[0]
 
 
+    # TODO: improve the functions below!
     """ No-flux evaluation """
     def _eval_noflux(self, u):
         # hmm u has shape (1, N)
@@ -93,6 +98,26 @@ class NonLocalGradient:
         u_rhs = u[-bw:]
         rhs = -np.dot(self.circ, u_rhs[::-1])[:self.M]
         z[-self.M:] = rhs[::-1]
+        return z
+
+
+    """ Weakly adhesive evaluation """
+    def _eval_weakly_adhesive(self, u):
+        # hmm u has shape (1, N)
+        u = u.flatten()
+        bw = 2*self.M
+        #print('u:', u.shape, ' M:', self.M,' bw:',bw)
+        z = ifft(np.tile(self.circFFT, (1, 1)) * fft(u))[0]
+        z[:self.M]  = np.dot(self.circ,          u[:bw])[0:self.M]
+        u_rhs = u[-bw:]
+        rhs = -np.dot(self.circ, u_rhs[::-1])[:self.M]
+        z[-self.M:] = rhs[::-1]
+
+        # add correction terms. At the moment we assume that we only have
+        # uniform kernels
+        z[:self.M]  += self.correction_lhs
+        z[-self.M:] += self.correction_rhs
+
         return z
 
 
@@ -118,8 +143,10 @@ class NonLocalGradient:
         elif self.mode == 'no-flux-reflect':
             print('Computing integration weights for no-flux reflect bcs.')
             self._init_weights_periodic()
-        elif self.mode == 'weakly-adhesive':
-            assert False, 'Unknown non-local gradient mode %s.' % self.mode
+        elif self.mode == 'weakly-adhesive' or self.mode == 'naive':
+            print('Computing integration weights for weakly-adhesive bcs.')
+            self._init_weights_periodic()
+            self._init_weights_weakly_adhesive()
         else:
             assert False, 'Unknown non-local gradient mode %s.' % self.mode
 
@@ -134,8 +161,18 @@ class NonLocalGradient:
         elif self.mode == 'no-flux-reflect':
             self._eval = self._eval_pp
             self._init_bcs_periodic()
+        elif self.mode == 'naive':
+            self._eval = self._eval_weakly_adhesive
+            self._init_bcs_weakly_adhesive()
+            self.beta0 = 0.
+            self.betaL = 0.
+        elif self.mode == 'weakly-adhesive':
+            self._eval = self._eval_weakly_adhesive
+            self._init_bcs_weakly_adhesive()
         else:
             assert False, 'Unknown non-local gradient mode %s.' % self.mode
+
+        print('NonLocalGradient ready!')
 
 
     """ Implementation details """
@@ -143,7 +180,7 @@ class NonLocalGradient:
         return ((x - xi) / self.h - l < lower) or ((x - xi) / self.h - l > upper)
 
 
-    """ """
+    """ The uniform integration kernel """
     def _integration_kernel(self):
         OmegaM = lambda r : (-1. / (2. * self.R)) * (np.abs(r) <= self.R)
         OmegaP = lambda r : ( 1. / (2. * self.R)) * (np.abs(r) <= self.R)
@@ -372,5 +409,14 @@ class NonLocalGradient:
             circ[i + NSO2, i:i+2 * NSO2] = self.weights_bc[i, :]
 
         self.circ = circ[NSO2:-NSO2, NSO2:-NSO2]
+
+        # compute correction terms
+        xs = np.linspace(0, self.L - self.h, self.N2)
+
+        self.correction_lhs = self.beta0 * (xs[:self.M] - self.R) / (2. * self.R)
+        self.correction_rhs = self.betaL * (self.R - (self.L - xs[-self.M:])) / (2. * self.R)
+
+        assert self.correction_lhs.size == self.M, 'Size is correction is incorrect!'
+        assert self.correction_rhs.size == self.M, 'Size is correction is incorrect!'
 
 
