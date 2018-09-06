@@ -43,7 +43,8 @@ class Patch(object):
         TODO
 
     """
-    def __init__(self, n, patchId, x0, dX, N, boundaryWidth = 0, nonLocal=False, **kwargs):
+    def __init__(self, n, patchId, x0, dX, N, boundaryWidth = 0,
+                 nonLocal=False, *args, **kwargs):
         #print('Creating patch: %d, origin: %s, dX: %s, N: %s.' % (patchId, x0, dX, N))
         self.x0  = x0
         self.N   = N
@@ -69,7 +70,7 @@ class Patch(object):
         self._setup_cell_centers()
 
         # setup
-        self._setup(nonLocal, **kwargs)
+        self._setup(nonLocal, *args, **kwargs)
 
 
     """ Public methods """
@@ -149,31 +150,32 @@ class Patch(object):
         self.xc = np.array(xcs)
 
 
-    def _setup(self, nonLocal, **kwargs):
+    """ Setup internal data structures! """
+    def _setup(self, nonLocal, *args, **kwargs):
         if nonLocal:
-            self._setup_nonlocal()
+            self._setup_nonlocal(*args, **kwargs)
 
         self.data = Data(self.n, self.patchId, self.dX, self.boundaryWidth,
                          self.dim, ngb = self.ngb)
 
 
     """ Non-local term special setup """
-    def _nonlocal_mode(self):
+    def _nonlocal_mode(self, *args, **kwargs):
         assert self.ngb.left.name == self.ngb.right.name, \
                 'Different boundary conditions are not supported for the non-local term!'
 
         if self.ngb.left.name == 'Periodic':
             return 'periodic'
         # TODO differentiate between the different types of no-flux bc
-        elif self.ngb.left.name == 'Neumann':
-            return 'no-flux'
+        elif self.ngb.left.name == 'Neumann' or self.ngb.left.name == 'NoFlux':
+            return kwargs.pop('nonLocalMode', 'no-flux')
         else:
             assert False, 'Unknown boundary type %s!' % self.ngb.left.name
 
 
-    def _setup_nonlocal(self):
+    def _setup_nonlocal(self, *args, **kwargs):
         assert self.dX.size == 1, 'not implemented'
-        mode = self._nonlocal_mode()
+        mode = self._nonlocal_mode(*args, **kwargs)
         self.nonLocalGradient = NonLocalGradient(self.dX[0], self.shape[0],
                                                  self.N[0], mode=mode)
 
