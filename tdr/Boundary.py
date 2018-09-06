@@ -20,7 +20,8 @@ class Boundary(SimulationObject):
         self.name = name
 
         # TODO: is there a better way to do this?
-        self.bc_lookup = {'None' : 0, 'Periodic' : 1, 'Neumann' : 2, 'Dirichlet' : 3}
+        self.bc_lookup = {'None' : 0, 'Periodic' : 1, 'Neumann' : 2,
+                          'Dirichlet' : 3, 'NoFlux' : 4}
 
         # default value for value and oNormal
         self.value = 1.
@@ -74,6 +75,10 @@ class Boundary(SimulationObject):
         return self.type == self.bc_lookup["Neumann"]
 
 
+    def isNoFlux(self):
+        return self.type == self.bc_lookup["NoFlux"]
+
+
     def isDirichlet(self):
         return self.type == self.bc_lookup["Dirichlet"]
 
@@ -105,10 +110,28 @@ class Neumann(Boundary):
             return Neumann(*args, **kwargs)
 
 
+class NoFlux(Boundary):
+    def __init__(self, oNormal, value = 0.):
+        super(NoFlux, self).__init__(name = "NoFlux", oNormal = oNormal)
+        self.value = value
+
+
+    """ Factory """
+    class Factory:
+        def create(self, *args, **kwargs):
+            return NoFlux(*args, **kwargs)
+
+
 class Dirichlet(Boundary):
     def __init__(self, oNormal, value = 0.):
         super(Dirichlet, self).__init__(name = "Dirichlet", oNormal = oNormal)
         self.value = value
+
+
+    """ Factory """
+    class Factory:
+        def create(self, *args, **kwargs):
+            return Dirichlet(*args, **kwargs)
 
 
 """
