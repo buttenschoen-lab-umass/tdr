@@ -144,7 +144,7 @@ class NonLocalGradient:
             print('Computing integration weights for no-flux reflect bcs.')
             self._init_weights_periodic()
         elif self.mode == 'weakly-adhesive' or self.mode == 'naive':
-            print('Computing integration weights for weakly-adhesive bcs.')
+            print('Computing integration weights for %s bcs.' % self.mode)
             self._init_weights_periodic()
             self._init_weights_weakly_adhesive()
         else:
