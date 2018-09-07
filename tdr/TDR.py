@@ -243,7 +243,7 @@ class TDR(object):
 
         if self.hasTransport():
             tFlux = TaxisFlux(self.size, self.dimensions, trans, Adhtrans,
-                              nonLocal=True, boundary=dom.bd)
+                              nonLocal=self.hasNonLocal(), boundary=dom.bd)
             self.fluxTerms['taxis'] = tFlux
 
 
