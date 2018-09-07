@@ -167,6 +167,8 @@ class NonLocalGradient:
             self.beta0 = 0.
             self.betaL = 0.
         elif self.mode == 'weakly-adhesive':
+            print('Using weakly-adhesive non-local gradient mode:')
+            print('\tWith β = (%.4g, %.4g).' % (self.beta0, self.betaL))
             self._eval = self._eval_weakly_adhesive
             self._init_bcs_weakly_adhesive()
         else:
