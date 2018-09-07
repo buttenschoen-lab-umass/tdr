@@ -117,7 +117,10 @@ class TDR(object):
         self.haveNonLocalTerms      = False
 
         # the flux term functions which are passed to the grid
-        self.fluxTerms = {}
+        self.fluxTerms  = {}
+
+        # fluxes sorted by priority
+        self.fluxes     = None
 
         # context access remove
         self.ctx        = None
