@@ -103,37 +103,37 @@ from tdr.utils import zeros, asarray, offdiagonal
 
 """
 class TDR(object):
-    def __init__(self, noPDEs = 1, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         # terms
         self.version        = 'TDR-python-0.1'
-        self.FNonLocal      = None # the non-local term
-        self.FReac          = None # reaction terms
-        self.FTrans         = None # diffusion term
-        self.size           = noPDEs
-        self.dimensions     = 1
+        self.size           = kwargs.pop('noPDEs', 1)
+        self.dimensions     = None
         self.bw             = kwargs.pop('bw', 0)
 
         # for easy checking of requirements
         self.haveReactionTerms      = False
         self.haveDiffusionTerms     = False
-        self.haveTaxisTerms         = True
-        self.haveNonLocalTerms      = True
+        self.haveTaxisTerms         = False
+        self.haveNonLocalTerms      = False
 
         # the flux term functions which are passed to the grid
         self.fluxTerms = {}
 
         # context access remove
-        self.ctx = None
+        self.ctx        = None
 
         # store domain
-        self.dom = None
+        self.dom        = None
 
         # grid
-        self.grid = None
+        self.grid       = None
 
         # values passed to solver
-        self.y      = None
-        self.ydot   = None
+        self.y          = None
+        self.ydot       = None
+
+        # whether or not to do step wise error checking
+        self.debug      = kwargs.pop('debug', False)
 
         # setup
         self._setup(*args, **kwargs)
@@ -144,8 +144,16 @@ class TDR(object):
         return self.haveTaxisTerms or self.haveNonLocalTerms
 
 
+    def hasNonLocal(self):
+        return self.haveNonLocalTerms
+
+
     def hasDiffusion(self):
         return self.haveDiffusionTerms
+
+
+    def hasReaction(self):
+        return self.haveReactionTerms
 
 
     """ compute required boundaryWidth """
@@ -158,8 +166,7 @@ class TDR(object):
         return self.bw
 
 
-    """ This is the entry point for the integrator """
-    def __call__(self, t, y):
+    def _check_solution(self, t, y):
         # check that we dont have NaN values
         if np.any(np.isnan(y)):
             raise ValueError("Encountered NaN in TDR update at time: %.4g" % t)
@@ -169,6 +176,12 @@ class TDR(object):
 
         if np.any(np.abs(y) > 1.e5):
             raise ValueError("Encountered too large values in TDR update at time: %.4g" % t)
+
+
+    """ This is the entry point for the integrator """
+    def __call__(self, t, y):
+        if self.debug:
+            self._check_solution(t, y)
 
         # update everything
         self.update(t, y)
@@ -206,33 +219,41 @@ class TDR(object):
         self.dom = dom
 
         # load transition matrices
-        trans    = asarray(kwargs.pop('transitionMatrix', zeros(self.size)))
-        Adhtrans = asarray(kwargs.pop('AdhesionTransitionMatrix', zeros(self.size)))
-        #Txstrans = asarray(kwargs.pop('TaxisTransitionMatrix', zeros(self.size)))
-        reaction = asarray(kwargs.pop('reactionTerms', np.full(self.size, None)))
+        trans    = asarray(kwargs.pop('transitionMatrix',           zeros(self.size)))
+        Adhtrans = asarray(kwargs.pop('AdhesionTransitionMatrix',   zeros(self.size)))
+        reaction = asarray(kwargs.pop('reactionTerms',              np.full(self.size, None)))
+
+        self.haveDiffusionTerms = np.any(np.diagonal(trans) != 0)
+        self.haveReactionTerms  = np.any(reaction != None)
+        self.haveNonLocalTerms  = np.any(Adhtrans != 0)
+        self.haveTaxisTerms     = np.any(offdiagonal(trans) != 0)
 
         # grid information
         grd = { 'nop' : nop, 'ngb' : ngb, 'dX' : dX, 'N' : N, 'x0' : x0}
 
         self.grid = Grid(self.size, grd, self.dimensions, bw = self.get_bw(),
-                         nonLocal = np.sum(np.abs(Adhtrans))!=0, **kwargs)
+                         nonLocal = self.hasNonLocal(), *args, **kwargs)
 
         # create basic flux types
-        if np.any(np.diagonal(trans) != 0):
-            dFlux = DiffusionFlux(self.size, self.dimensions, trans)
+        if self.hasDiffusion():
+            dFlux = DiffusionFlux(self.size, self.dimensions, trans,
+                                  boundary=dom.bd)
             self.fluxTerms['diffusion'] = dFlux
 
-        if np.any(Adhtrans != 0) or np.any(offdiagonal(trans) != 0):
-            tFlux = TaxisFlux(self.size, self.dimensions, trans, Adhtrans, nonLocal = True)
+
+        if self.hasTransport():
+            tFlux = TaxisFlux(self.size, self.dimensions, trans, Adhtrans,
+                              nonLocal=True, boundary=dom.bd)
             self.fluxTerms['taxis'] = tFlux
 
-        #if np.any(Txstrans != 0):
-        #    tFlux = TaxisFlux(self.size, self.dimensions, Txstrans, nonLocal = False)
-        #    self.fluxTerms['taxis'] = tFlux
 
-        if np.any(reaction != None):
+        if self.hasReaction():
             rFlux = ReactionFlux(self.size, self.dimensions, reaction)
             self.fluxTerms['reaction'] = rFlux
+
+        # sort the flux terms
+        self.fluxes = sorted(self.fluxTerms.values(),
+                             key=lambda flux : flux.priority(), reverse=True)
 
 
     """ update between solver steps """
@@ -242,7 +263,7 @@ class TDR(object):
         self.grid.update(t, self.y)
 
         # compute the fluxes
-        for name, flux in self.fluxTerms.items():
+        for flux in self.fluxes:
             self.grid.apply_flux(flux)
 
         self.ydot = self.grid.get_ydot()
