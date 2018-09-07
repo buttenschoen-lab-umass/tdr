@@ -27,7 +27,29 @@ class Data(object):
         dimensions      : int
                           Spatial dimensions
 
-        Data Layout
+        1D Data Layout
+        ----------
+        Data is in a 1d numpy array from the left to the right.
+
+           Ω1      Ω2              ΩM
+        |       |      |        |      |
+        |  x1   |  x2  | ...... |  xM  |
+        |       |      |        |      |
+        Γ                              Γ
+
+        where Γ is the domain boundary.
+
+        Some boundary conditions require the value of u on the boundary. For
+        this purpose we use a simple extrapolation. So that the value on the
+        left boudary is computed by:
+
+            α_{D} = N_{1} + 0.5 (N_{2} - N_{1}),
+
+        and the right boundary by:
+
+            α_{D} = N_{M} - 0.5 (N_{M-1} - N_{M}).
+
+        2D Data Layout
         ----------
         Indexing works like this y[pdeIdx, xCoord, yCoord]
         Note that if we print a 2D numpy array it looks like this
@@ -73,15 +95,26 @@ class Data(object):
         self.boundary           = ngb
         # data
         self.ydot               = None
+
         # storage for y
         self.y                  = None
         self.t                  = None
+
+        # approximations of values of y on the boundary a.k.a. α_{D}.
+        self.boundary_approx    = None
+
+        # needed for no-flux bc
+        self.taxis_bd_aprx      = None
+        self.diffusion_bd_aprx  = None
 
         # data which is created by this class
         self._reset()
 
         # call to set face data
-        self._compute = None
+        self._compute           = None
+
+        # helper to deal with boundary condition related updates
+        self._boundary_helper   = None
 
         # setup
         self._setup()
@@ -92,30 +125,48 @@ class Data(object):
         #assert self.boundary is not None, 'Boundary cannot be None!'
         if self.dim == 1:
             self._compute = self._compute_face_data_1d
+            self.set_values = self.set_values_1d
         elif self.dim == 2:
             self._compute = self._compute_face_data_2d
+            self.set_values = self.set_values_2d
         else:
             assert False, 'Compute face data not implemented for %dd' % self.dim
+
+        # setup boundary conditions
+        lBoundary = self.boundary.left
+        rBoundary = self.boundary.right
+
+        if lBoundary.isPeriodic() or rBoundary.isPeriodic():
+            assert lBoundary.isPeriodic(), 'Error: Both boundaries are required to be periodic!'
+            assert rBoundary.isPeriodic(), 'Error: Both boundaries are required to be periodic!'
+            self._boundary_helper = self._periodic_set_values_helper
+        elif lBoundary.isNeumann() or rBoundary.isNeumann():
+            assert lBoundary.isNeumann(), 'Error: Both boundaries are required to be Neumann!'
+            assert rBoundary.isNeumann(), 'Error: Both boundaries are required to be Neumann!'
+            self._boundary_helper = self._neumann_set_values_helper
+        elif lBoundary.isNoFlux() or rBoundary.isNoFlux():
+            assert lBoundary.isNoFlux(), 'Error: Both boundaries are required to be Neumann!'
+            assert rBoundary.isNoFlux(), 'Error: Both boundaries are required to be Neumann!'
+            self._boundary_helper = self._noflux_set_values_helper
+        elif lBoundary.isDirichlet() or rBoundary.isDirichlet():
+            assert False, 'Dirichlet boundary conditions not implemented!'
+        else:
+            print("WARNING: No special boundary handling enabled!")
 
 
     """ reset """
     def _reset(self):
         self.ComputedFaceData   = False
+
         # derivatives on cell boundary
         self.uDx                = None
         self.uDy                = None
+
         # averages on cell boundary
         self.uAvx               = None
         self.uAvy               = None
         self.skalYT             = None
         self.skalYB             = None
-
-        if self.dim == 1:
-            self.set_values = self.set_values_1d
-        elif self.dim == 2:
-            self.set_values = self.set_values_2d
-        else:
-            assert False, 'Compute face data not implemented for %dd' % self.dim
 
 
     """ Set values """
@@ -133,45 +184,95 @@ class Data(object):
         # reset ydot
         self.ydot           = np.zeros((self.n, nx))
 
-        # TODO look these up
-        # deal with the boundaries 1D only atm
-        lBoundary = self.boundary.left
-
-        if lBoundary.isPeriodic(): # periodic
-            # TODO do this better!
-            nCb = np.arange(-bw, 0)
-            self.y[:, 0:bw] = self.y[:, nCb + nx + bw]
-
-        # at the moment this is really NoFlux bc
-        # TODO deal with this per equation!
-        elif lBoundary.isNeumann():
-            # This setups the boundary as follows: Here || denotes the boundary
-            # | y1 | y0 || y0 | y1 |
-            nCb = np.arange(bw, 0, -1) - 1
-            self.y[:, 0:bw] = self.y[:, nCb + bw]
-            #print('NeumannLeft:',self.y[1, :5])
-        else:
-            assert False, 'not implemented'
-
-        # TODO look these up
-        rBoundary = self.boundary.right
-
-        if rBoundary.isPeriodic(): # periodic BC
-            Cb = np.arange(0, bw)
-            self.y[:, Cb + nx + bw] = self.y[:, bw + Cb]
-        # NoFlux boundary conditions only here!!!
-        elif rBoundary.isNeumann():
-            # This setups the boundary as follows: Here || denotes the boundary
-            # | yN-1 | yN || yN | yN-1 |
-            Cb  = np.arange(0, bw)
-            nCb = np.arange(1, -bw+1, -1)
-            self.y[:, Cb + nx + bw] = self.y[:, nCb + nx]
-            #print('NeumannRight:',self.y[1, -5:])
-        else:
-            assert False, 'Not implemented'
+        # Deal with any boundary updates that are required by the boundary conditions
+        self._boundary_helper(bw, nx)
 
         # Finally reset
         self._reset()
+
+
+    """ Helpers for dealing with boundary conditions """
+    def _periodic_set_values_helper(self, bw, nx):
+        # Left boundary
+        nCb = np.arange(-bw, 0)
+        self.y[:, 0:bw] = self.y[:, nCb + nx + bw]
+
+        # Right boundary
+        Cb = np.arange(0, bw)
+        self.y[:, Cb + nx + bw] = self.y[:, bw + Cb]
+
+
+    def _neumann_set_values_helper(self, bw, nx):
+        # Left Boundary
+
+        # This setups the boundary as follows: Here || denotes the boundary
+        # | y1 | y0 || y0 | y1 |
+        nCb = np.arange(bw, 0, -1) - 1
+        self.y[:, 0:bw] = self.y[:, nCb + bw]
+
+        # Right boundary
+
+        # This setups the boundary as follows: Here || denotes the boundary
+        # | yN-1 | yN || yN | yN-1 |
+        Cb  = np.arange(0, bw)
+        nCb = np.arange(1, -bw+1, -1)
+        self.y[:, Cb + nx + bw] = self.y[:, nCb + nx]
+
+
+    def _noflux_set_values_helper(self, bw, nx):
+        # Left Boundary
+
+        # This setups the boundary as follows: Here || denotes the boundary
+        # | y1 | y0 || y0 | y1 |
+        nCb = np.arange(bw, 0, -1) - 1
+        self.y[:, 0:bw] = self.y[:, nCb + bw]
+
+        # Right boundary
+
+        # This setups the boundary as follows: Here || denotes the boundary
+        # | yN-1 | yN || yN | yN-1 |
+        Cb  = np.arange(0, bw)
+        nCb = np.arange(1, -bw+1, -1)
+        self.y[:, Cb + nx + bw] = self.y[:, nCb + nx]
+
+        # update boundary values
+        self._compute_boundary_approx_1d(bw)
+
+
+    """ compute boundary approximations in 1d """
+    def _compute_boundary_approx_1d(self, bw):
+        self.boundary_approx    = np.empty((self.n, 2))
+        self.taxis_bd_aprx      = np.empty((self.n, 2))
+        self.diffusion_bd_aprx  = np.empty((self.n, 2))
+
+        # use the above mentioned extrapolations
+        y = self.y[:, bw:-bw]
+
+        # Here we enforce positivity!
+        self.boundary_approx[:, 0] = np.maximum(0, y[:, 0]  + 0.5 * (y[:, 1]  - y[:, 0]))
+        self.boundary_approx[:, 1] = np.maximum(0, y[:, -1] - 0.5 * (y[:, -2] - y[:, -1]))
+
+
+    """ Compute the boundary face taxis approximation """
+    def get_bd_taxis(self, i, v):
+        """ This is done in Data since we have to store these values! """
+        self.taxis_bd_aprx[i, :] = v * self.boundary_approx[i, :]
+        return self.taxis_bd_aprx[i, :]
+
+
+    """ Compute the boundary face diffusion approximation """
+    def get_bd_diffusion(self, i):
+        """ This is done in Data since we have to store these values! """
+        # TODO: Implement non-zero fluxes!
+        self.diffusion_bd_aprx[i, :] = self.taxis_bd_aprx[i, :]
+        return self.diffusion_bd_aprx[i, :]
+
+
+    """ Update the ghost points after imposing no-flux bc """
+    def update_ghost_points_noflux(self, i, coefficient):
+        assert self.boundaryWidth == 2, 'Check implementation!'
+        zz = np.maximum(0., self.uDx[i, [0, -1]] * coefficient)
+        self.y[i, [1, -2]]  = zz
 
 
     """ Set values """
@@ -312,14 +413,5 @@ if __name__ == '__main__':
     plt.grid()
 
     plt.show()
-
-
-
-
-
-
-
-
-
 
 
