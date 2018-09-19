@@ -5,6 +5,7 @@
 from tdr.Flux import Flux
 from tdr.utils import apply_along_column
 
+
 class ReactionFlux(Flux):
     def __init__(self, noPDEs, dimensions, transitionMatrix, *args, **kwargs):
         super(ReactionFlux, self).__init__(noPDEs, dimensions, transitionMatrix, *args, **kwargs)

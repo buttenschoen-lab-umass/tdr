@@ -93,8 +93,14 @@ class Data(object):
         self.boundaryWidth      = boundaryWidth
         self.dX                 = dX
         self.boundary           = ngb
+
         # data
         self.ydot               = None
+
+        # patch sizes
+        self.L                  = None
+        self.L_previous         = None
+        self.L_dot_over_L       = None
 
         # storage for y
         self.y                  = None
@@ -169,6 +175,15 @@ class Data(object):
         self.skalYB             = None
 
 
+    """ update length information """
+    def deform(self, new_length, dt):
+        self.L_previous         = self.L
+        self.L                  = new_length
+
+        # let's see if this is sufficient!
+        self.L_dot_over_L       = (1. - self.L_previous / self.L) / dt
+
+
     """ Set values """
     def set_values_1d(self, t, y):
         self.t              = t
@@ -180,6 +195,9 @@ class Data(object):
             self.y[:, bw:-bw]   = y
         else:
             self.y[:] = y
+
+        # make sure this runs before deform!
+        self.L_dot_over_L       = 0.
 
         # reset ydot
         self.ydot           = np.zeros((self.n, nx))
@@ -334,7 +352,7 @@ class Data(object):
     """ This computes uDx: the x-derivative approximation on right cell boundaries """
     def _compute_uDx_1d(self):
         bw = self.boundaryWidth
-        assert bw == 2, 'BoundaryWidth must be at least 2 for fluxes!'
+        assert bw == 2, 'BoundaryWidth set at %d must be at least 2 for fluxes!' % bw
 
         self.uDx  = (1. / self.dX[0]) * \
                 (self.y[:, bw:-bw+1] - self.y[:, bw-1:-bw])

@@ -161,10 +161,11 @@ class TDR(object):
 
     """ compute required boundaryWidth """
     def get_bw(self):
-        if self.hasTransport():
+        # TEMP FIGURE THIS OUT!!
+        if self.hasTransport() or self.hasDiffusion():
             return np.max(2, self.bw)
-        elif self.hasDiffusion():
-            return np.max(1, self.bw)
+        #elif self.hasDiffusion():
+        #    return np.max(1, self.bw)
 
         return self.bw
 

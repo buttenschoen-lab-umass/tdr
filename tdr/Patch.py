@@ -25,6 +25,8 @@ class Patch(object):
                           Identifying the boundary patches
         x0              : ndarray
                           The lower corner of the patch
+        xf              : ndarray
+                          The upper corner of the patch
         dX              : ndarray
                           Array of step lengths in each dimension
         N               : ndarray
@@ -46,13 +48,14 @@ class Patch(object):
     def __init__(self, n, patchId, x0, dX, N, boundaryWidth = 0,
                  nonLocal=False, *args, **kwargs):
         #print('Creating patch: %d, origin: %s, dX: %s, N: %s.' % (patchId, x0, dX, N))
-        self.x0  = x0
-        self.N   = N
-        self.n   = n
-        self.dim = N.size
-        self.dX  = dX
-        self.ngb = kwargs.pop('ngb', DomainBoundary(self.dim))
-        self.shape = self.N * self.dX
+        self.x0     = x0
+        self.N      = N
+        self.n      = n
+        self.dim    = N.size
+        self.dX     = dX
+        self.ngb    = kwargs.pop('ngb', DomainBoundary(self.dim))
+        self.shape  = self.N * self.dX
+        self.xf     = self.x0 + self.shape
 
         self.patchId = patchId
         # TODO set DEPRECATE ONE!
@@ -65,6 +68,10 @@ class Patch(object):
 
         # array holding the cell centers
         self.xc = None
+
+        # Print status
+        print('Creating patch(%d) with lower corner %s and upper corner %s.' %
+              (self.patchId, self.x0, self.xf))
 
         # build cell centers
         self._setup_cell_centers()
@@ -81,6 +88,11 @@ class Patch(object):
 
     def length(self):
         return self.N * self.dX
+
+
+    def deform(self, newEndPoints):
+        # do something with these
+        #self.data.deform()
 
 
     def endPoints(self):
