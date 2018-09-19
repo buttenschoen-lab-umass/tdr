@@ -14,6 +14,7 @@ from tdr.Grid import Grid
 from tdr.FluxDiffusion import DiffusionFlux
 from tdr.FluxTaxis import TaxisFlux
 from tdr.FluxReaction import ReactionFlux
+from tdr.FluxDilution import DilutionFlux
 
 from tdr.utils import zeros, asarray, offdiagonal
 
@@ -115,6 +116,7 @@ class TDR(object):
         self.haveDiffusionTerms     = False
         self.haveTaxisTerms         = False
         self.haveNonLocalTerms      = False
+        self.haveDilutionTerms      = False
 
         # the flux term functions which are passed to the grid
         self.fluxTerms  = {}
@@ -157,6 +159,10 @@ class TDR(object):
 
     def hasReaction(self):
         return self.haveReactionTerms
+
+
+    def hasDilution(self):
+        return self.haveDilutionTerms
 
 
     """ compute required boundaryWidth """
@@ -226,11 +232,13 @@ class TDR(object):
         trans    = asarray(kwargs.pop('transitionMatrix',           zeros(self.size)))
         Adhtrans = asarray(kwargs.pop('AdhesionTransitionMatrix',   zeros(self.size)))
         reaction = asarray(kwargs.pop('reactionTerms',              np.full(self.size, None)))
+        dilution = asarray(kwargs.pop('domainGrowth',               np.full(self.size, None)))
 
         self.haveDiffusionTerms = np.any(np.diagonal(trans) != 0)
         self.haveReactionTerms  = np.any(reaction != None)
         self.haveNonLocalTerms  = np.any(Adhtrans != 0)
         self.haveTaxisTerms     = np.any(offdiagonal(trans) != 0)
+        self.haveDilutionTerms  = np.any(dilution != None)
 
         # grid information
         grd = { 'nop' : nop, 'ngb' : ngb, 'dX' : dX, 'N' : N, 'x0' : x0}
@@ -254,6 +262,12 @@ class TDR(object):
         if self.hasReaction():
             rFlux = ReactionFlux(self.size, self.dimensions, reaction)
             self.fluxTerms['reaction'] = rFlux
+
+
+        if self.hasDilution():
+            dFlux = DilutionFlux(self.size, self.dimensions, dilution)
+            self.fluxTerms['dilution'] = dFlux
+
 
         # sort the flux terms
         self.fluxes = sorted(self.fluxTerms.values(),
