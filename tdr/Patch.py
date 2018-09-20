@@ -91,6 +91,7 @@ class Patch(object):
 
 
     def deform(self, newEndPoints):
+        pass
         # do something with these
         #self.data.deform()
 
