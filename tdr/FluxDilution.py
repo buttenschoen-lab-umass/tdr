@@ -1,6 +1,12 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Author: Andreas Buttenschoen
+from __future__ import print_function, division
+
+"""
+    This class implements a simple dilution effect in concentration fields due
+    to domain size changes in growing domains.
+"""
 
 from tdr.Flux import Flux
 
@@ -24,7 +30,8 @@ class DilutionFlux(Flux):
         # Compute reaction term for each of the PDEs
         # It seems easier to do this all at once, since these things may depend
         # on each other.
-        Hd = patch.data.y[:, patch.bW:-patch.bW] * patch.data.L_dot_over_L
+        #print('r_dot_over_r:', patch.data.r_dot_over_r)
+        Hd = patch.data.y[:, patch.bW:-patch.bW] * patch.data.r_dot_over_r
 
         # cut of the boundary width
         patch.data.ydot -= Hd

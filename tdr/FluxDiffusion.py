@@ -22,6 +22,11 @@ class DiffusionFlux(Flux):
             self.call(i, patch)
 
 
+    """ update constants """
+    def update(self, t):
+        self.trans = self.cFunctional(t)
+
+
     """ setup the flux """
     def _setup(self):
         if self.dim == 1:

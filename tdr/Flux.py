@@ -13,6 +13,9 @@ class Flux(object):
         # priority
         self._priority  = 0
 
+        # possible deformation
+        self.cFunctional = kwargs.pop('cFunctional', None)
+
         # setup
         self._setup()
 
@@ -28,4 +31,9 @@ class Flux(object):
     """ Functor """
     def __call__(self, patch):
         self.call(patch)
+
+
+    """ update constants """
+    def update(self, t):
+        pass
 
