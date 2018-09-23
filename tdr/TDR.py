@@ -144,6 +144,11 @@ class TDR(object):
         self._setup(*args, **kwargs)
 
 
+    """ check whether the TDR is autonomous """
+    def isAutonomous(self):
+        return not self.hasDeformation()
+
+
     """ has Transport effects registered """
     def hasTransport(self):
         return self.haveTaxisTerms or self.haveNonLocalTerms
@@ -161,7 +166,14 @@ class TDR(object):
         return self.haveReactionTerms
 
 
+    """ The next two are equivalent at the moment for easy checking for any
+        deformations that may be occurings.
+    """
     def hasDilution(self):
+        return self.haveDilutionTerms
+
+
+    def hasDeformation(self):
         return self.haveDilutionTerms
 
 
@@ -222,6 +234,9 @@ class TDR(object):
         x0  = asarray(dom.origin())
         N   = asarray(dom.N, np.int)
 
+        # set time to initial time
+        self.t = kwargs.pop('t0', 0.)
+
         # set dimension
         self.dimensions = dom.dimensions()
 
@@ -232,24 +247,43 @@ class TDR(object):
         trans    = asarray(kwargs.pop('transitionMatrix',           zeros(self.size)))
         Adhtrans = asarray(kwargs.pop('AdhesionTransitionMatrix',   zeros(self.size)))
         reaction = asarray(kwargs.pop('reactionTerms',              np.full(self.size, None)))
-        dilution = asarray(kwargs.pop('domainGrowth',               np.full(self.size, None)))
+
+        # These should be shared among all players on the domain!
+        deformation = asarray(kwargs.pop('r',                       None))
+        dr          = asarray(kwargs.pop('dr',                      None))
 
         self.haveDiffusionTerms = np.any(np.diagonal(trans) != 0)
         self.haveReactionTerms  = np.any(reaction != None)
         self.haveNonLocalTerms  = np.any(Adhtrans != 0)
         self.haveTaxisTerms     = np.any(offdiagonal(trans) != 0)
-        self.haveDilutionTerms  = np.any(dilution != None)
+        self.haveDilutionTerms  = np.any(deformation != None)
+
+        if self.hasDeformation():
+            # make sure we both have r and dr
+            assert np.any(dr != None), 'The time derivative of the domain deformation must be provided!'
+
+            # this is only for house-keeping
+            self.dom.setup_deformation(deformation)
 
         # grid information
         grd = { 'nop' : nop, 'ngb' : ngb, 'dX' : dX, 'N' : N, 'x0' : x0}
 
         self.grid = Grid(self.size, grd, self.dimensions, bw = self.get_bw(),
-                         nonLocal = self.hasNonLocal(), *args, **kwargs)
+                         nonLocal = self.hasNonLocal(), r=deformation, dr=dr,
+                         *args, **kwargs)
 
         # create basic flux types
         if self.hasDiffusion():
-            dFlux = DiffusionFlux(self.size, self.dimensions, trans,
-                                  boundary=dom.bd)
+            # if we have deformation support need to update diffusion coefficient
+            dFlux_kwargs = {'boundary' : dom.bd}
+
+            if self.hasDeformation():
+                # setup cFunctional
+                L0 = self.dom.L
+                cFunctional = lambda t : trans / (L0 * deformation[0,0](t))**2
+                dFlux_kwargs['cFunctional'] = cFunctional
+
+            dFlux = DiffusionFlux(self.size, self.dimensions, trans, **dFlux_kwargs)
             self.fluxTerms['diffusion'] = dFlux
 
 
@@ -265,7 +299,7 @@ class TDR(object):
 
 
         if self.hasDilution():
-            dFlux = DilutionFlux(self.size, self.dimensions, dilution)
+            dFlux = DilutionFlux(self.size, self.dimensions, deformation)
             self.fluxTerms['dilution'] = dFlux
 
 
@@ -279,6 +313,15 @@ class TDR(object):
         self.t = t
         self.y = self.reshape(y)
         self.grid.update(t, self.y)
+
+        # just to keep information up to date
+        self.dom.deform(t)
+
+        # For the moment only update fluxes if deformation is set
+        if self.hasDeformation():
+            for flux in self.fluxes:
+                # update potential time-depending coefficients in the fluxes
+                flux.update(t)
 
         # compute the fluxes
         for flux in self.fluxes:
