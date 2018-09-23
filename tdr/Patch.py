@@ -82,18 +82,13 @@ class Patch(object):
 
     """ Public methods """
     def update(self, t, y):
+        # must run these before
         self.data.set_values(t, y)
         self.data.compute_face_data()
 
 
     def length(self):
         return self.N * self.dX
-
-
-    def deform(self, newEndPoints):
-        pass
-        # do something with these
-        #self.data.deform()
 
 
     def endPoints(self):
@@ -105,6 +100,8 @@ class Patch(object):
 
 
     def step_size(self):
+        # TODO: figure out when we are deforming the domain whether we need to
+        # adjust this here?
         return self.dX
 
 
@@ -169,7 +166,7 @@ class Patch(object):
             self._setup_nonlocal(*args, **kwargs)
 
         self.data = Data(self.n, self.patchId, self.dX, self.boundaryWidth,
-                         self.dim, ngb = self.ngb)
+                         self.dim, ngb = self.ngb, *args, **kwargs)
 
 
     """ Non-local term special setup """
