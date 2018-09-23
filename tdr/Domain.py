@@ -40,6 +40,12 @@ class Interval(SimulationObject):
 
         self.bd                 = kwargs.pop('bd', DomainBoundary())
 
+        # for deformation support
+        self.deformation        = None
+
+        # scaling value for domain scaling
+        self.r                  = 1.
+
         if xml is not None:
             print('Creating Interval from xml!')
             self._create_from_xml(xml, *args, **kwargs)
@@ -105,7 +111,7 @@ class Interval(SimulationObject):
 
 
     def xs(self):
-        return np.linspace(self.x0, self.xf - self.h, self.N)
+        return self.r * np.linspace(self.x0, self.xf - self.h, self.N)
 
 
     def box(self):
@@ -152,6 +158,19 @@ class Interval(SimulationObject):
 
         #print('value:', value, ' nidx:', int(new_value))
         return int(new_value) % int(self.N)
+
+
+    """ deformation support """
+    def deform(self, t):
+        if self.deformation is None:
+            return
+
+        self.r = self.deformation(t)
+
+
+    def setup_deformation(self, functional):
+        assert functional.size == 1, 'We can only have one function describing domain deformation!'
+        self.deformation = functional[0, 0]
 
 
 """
@@ -221,5 +240,14 @@ class Square(object):
 
     def __str__(self):
         return self.__repr__()
+
+
+    """ deformation support """
+    def deform(self, t):
+        assert False, 'not implemented'
+
+
+    def setup_deformation(self, functional):
+        assert False, 'not implemented'
 
 
