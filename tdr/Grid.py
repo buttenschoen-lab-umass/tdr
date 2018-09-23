@@ -43,12 +43,15 @@ class Grid(object):
         return self.patches
 
 
+    """ update grid information """
     def update(self, t, y):
         # TODO need to unwrap y
         for patch in self.patches.values():
+            # The patch update function has to run before any deformations!
             patch.update(t, y)
 
 
+    """ Apply fluxes for all patches """
     def apply_flux(self, flux):
         for patch in self.patches.values():
             patch.apply_flux(flux)
