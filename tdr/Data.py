@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Author: Andreas Buttenschoen
-from __future__ import print_function
+from __future__ import print_function, division
 
 """
     This class implements the scratch space for a given patch. It also compute
@@ -9,6 +9,9 @@ from __future__ import print_function
 """
 
 import numpy as np
+
+from tdr.utils import asarray
+
 
 class Data(object):
     """
@@ -85,7 +88,7 @@ class Data(object):
         TODO
 
     """
-    def __init__(self, n, patchId, dX, boundaryWidth, dimensions, ngb):
+    def __init__(self, n, patchId, dX, boundaryWidth, dimensions, ngb, *args, **kwargs):
         # Important numbers
         self.n                  = n
         self.dim                = dimensions
@@ -97,14 +100,21 @@ class Data(object):
         # data
         self.ydot               = None
 
-        # patch sizes
-        self.L                  = None
-        self.L_previous         = None
-        self.L_dot_over_L       = None
+        # patch scaling information for deformation support
+        self.r                  = 1.
+        self.dr                 = 0.
+        self.r_dot_over_r       = 0.
 
         # storage for y
         self.y                  = None
         self.t                  = None
+
+        # Compute time-step for deformation support
+        self.dt                 = None
+
+        # patch deformation
+        self.deformation        = None
+        self.deformation_dt     = None
 
         # approximations of values of y on the boundary a.k.a. α_{D}.
         self.boundary_approx    = None
@@ -123,11 +133,11 @@ class Data(object):
         self._boundary_helper   = None
 
         # setup
-        self._setup()
+        self._setup(*args, **kwargs)
 
 
     """ setup function """
-    def _setup(self):
+    def _setup(self, *args, **kwargs):
         #assert self.boundary is not None, 'Boundary cannot be None!'
         if self.dim == 1:
             self._compute = self._compute_face_data_1d
@@ -137,6 +147,12 @@ class Data(object):
             self.set_values = self.set_values_2d
         else:
             assert False, 'Compute face data not implemented for %dd' % self.dim
+
+        # set initial time
+        self.t = kwargs.pop('t0', 0.)
+
+        # setup possible domain deformation
+        self.setup_deformation(*args, **kwargs)
 
         # setup boundary conditions
         lBoundary = self.boundary.left
@@ -160,6 +176,25 @@ class Data(object):
             print("WARNING: No special boundary handling enabled!")
 
 
+    """ setup deformation """
+    def setup_deformation(self, *args, **kwargs):
+        # see if we have a deforming domain
+        deformation     = asarray(kwargs.pop('r',  None))
+        deformation_dt  = asarray(kwargs.pop('dr', None))
+
+        assert deformation.size == 1 and deformation_dt.size == 1, \
+            'We can only have one function describing domain deformation!'
+        self.deformation    = deformation[0, 0]
+        self.deformation_dt = deformation_dt[0, 0]
+
+        # We are not deforming
+        if self.deformation is None or self.deformation_dt is None:
+            return
+
+        assert self.deformation(0) == 1., 'Deformation must return 1. for time zero!'
+        self.r = self.deformation(0)
+
+
     """ reset """
     def _reset(self):
         self.ComputedFaceData   = False
@@ -176,17 +211,27 @@ class Data(object):
 
 
     """ update length information """
-    def deform(self, new_length, dt):
-        self.L_previous         = self.L
-        self.L                  = new_length
+    def deform(self, t):
+        self.r                  = self.deformation(t)
+        self.dr                 = self.deformation_dt(t)
 
-        # let's see if this is sufficient!
-        self.L_dot_over_L       = (1. - self.L_previous / self.L) / dt
+        assert self.r > 0., 'Domain scaling factor cannot be non-positive!'
+
+        # can't approximate dr/dt by a finite difference since the rowmap
+        # solver will call these out of sequence.
+        # self.r_dot_over_r       = (1. - self.r_previous / self.r) / self.dt
+        self.r_dot_over_r       = self.dr / self.r
 
 
     """ Set values """
-    def set_values_1d(self, t, y):
+    def _set_timestep(self, t):
         self.t              = t
+
+
+    def set_values_1d(self, t, y):
+        # compute time-step
+        self._set_timestep(t)
+
         bw                  = self.boundaryWidth
         nx                  = y.shape[1]
         self.y              = np.empty((self.n, nx + 2 * bw))
@@ -197,13 +242,17 @@ class Data(object):
             self.y[:] = y
 
         # make sure this runs before deform!
-        self.L_dot_over_L       = 0.
+        self.r_dot_over_r       = 0.
 
         # reset ydot
         self.ydot           = np.zeros((self.n, nx))
 
         # Deal with any boundary updates that are required by the boundary conditions
         self._boundary_helper(bw, nx)
+
+        # do possible deformation
+        if self.deformation is not None:
+            self.deform(t)
 
         # Finally reset
         self._reset()
@@ -295,7 +344,9 @@ class Data(object):
 
     """ Set values """
     def set_values_2d(self, t, y):
-        self.t              = t
+        # compute time-step
+        self._set_timestep(t)
+
         bw                  = self.boundaryWidth
         nx                  = y.shape[1]
         ny                  = y.shape[2]
