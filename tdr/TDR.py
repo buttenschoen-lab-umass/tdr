@@ -262,8 +262,9 @@ class TDR(object):
             # make sure we both have r and dr
             assert np.any(dr != None), 'The time derivative of the domain deformation must be provided!'
 
+            # TODO: do this differently
             # this is only for house-keeping
-            self.dom.setup_deformation(deformation)
+            # self.dom.setup_deformation(deformation)
 
         # grid information
         grd = { 'nop' : nop, 'ngb' : ngb, 'dX' : dX, 'N' : N, 'x0' : x0}
@@ -314,8 +315,9 @@ class TDR(object):
         self.y = self.reshape(y)
         self.grid.update(t, self.y)
 
+        # TODO: FIXME
         # just to keep information up to date
-        self.dom.deform(t)
+        # self.dom.deform(t)
 
         # For the moment only update fluxes if deformation is set
         if self.hasDeformation():
