@@ -59,7 +59,6 @@ class Boundary(SimulationObject):
         assert self.name is not "Boundary", 'Boundary type must be set!'
         self._validate()
         self.type = self.bc_lookup[self.name]
-        print('Registered %s boundary.' % self.name)
 
 
     def __str__(self):
