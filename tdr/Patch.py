@@ -45,8 +45,7 @@ class Patch(object):
         TODO
 
     """
-    def __init__(self, n, patchId, x0, dX, N, boundaryWidth = 0,
-                 nonLocal=False, *args, **kwargs):
+    def __init__(self, n, patchId, x0, dX, N, *args, **kwargs):
         #print('Creating patch: %d, origin: %s, dX: %s, N: %s.' % (patchId, x0, dX, N))
         self.x0     = x0
         self.N      = N
@@ -59,8 +58,8 @@ class Patch(object):
 
         self.patchId = patchId
         # TODO set DEPRECATE ONE!
-        self.boundaryWidth      = boundaryWidth
-        self.bW                 = boundaryWidth
+        self.boundaryWidth      = kwargs.pop('boundaryWidth', 0)
+        self.bW                 = self.boundaryWidth
         self.nonLocalGradient   = None
 
         # data for the patch
@@ -77,7 +76,7 @@ class Patch(object):
         self._setup_cell_centers()
 
         # setup
-        self._setup(nonLocal, *args, **kwargs)
+        self._setup(*args, **kwargs)
 
 
     """ Public methods """
@@ -161,7 +160,8 @@ class Patch(object):
 
 
     """ Setup internal data structures! """
-    def _setup(self, nonLocal, *args, **kwargs):
+    def _setup(self, *args, **kwargs):
+        nonLocal = kwargs.pop('nonLocal', False)
         if nonLocal:
             self._setup_nonlocal(*args, **kwargs)
 
