@@ -242,6 +242,7 @@ class TDR(object):
 
         # save domain
         self.dom = dom
+        print('TDR: registered domain %s.' % self.dom)
 
         # load transition matrices
         trans    = asarray(kwargs.pop('transitionMatrix',           zeros(self.size)))
@@ -269,7 +270,7 @@ class TDR(object):
         # grid information
         grd = { 'nop' : nop, 'ngb' : ngb, 'dX' : dX, 'N' : N, 'x0' : x0}
 
-        self.grid = Grid(self.size, grd, self.dimensions, bw = self.get_bw(),
+        self.grid = Grid(self.size, grd, self.dimensions, bw=self.get_bw(),
                          nonLocal = self.hasNonLocal(), r=deformation, dr=dr,
                          *args, **kwargs)
 
@@ -312,7 +313,9 @@ class TDR(object):
     """ update between solver steps """
     def update(self, t, y):
         self.t = t
+        # TODO Can i get rid of this potential copy here?
         self.y = self.reshape(y)
+
         self.grid.update(t, self.y)
 
         # TODO: FIXME
