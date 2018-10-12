@@ -9,7 +9,7 @@ from tdr.utils import expand_dims
 
 
 class Grid(object):
-    def __init__(self, n, grd, dim, bw = 0, nonLocal=False, *args, **kwargs):
+    def __init__(self, n, grd, dim, *args, **kwargs):
         # number of concentration fields
         self.n = n
 
@@ -17,7 +17,7 @@ class Grid(object):
         self.dim = dim
 
         # boundary width
-        self.boundaryWidth = bw
+        self.boundaryWidth = kwargs.pop('bw', 0)
 
         # cell centers
         self.cellCentreMatrix = None
@@ -35,7 +35,7 @@ class Grid(object):
         self.pe = {}
 
         # setup
-        self._setup(grd, nonLocal, *args, **kwargs)
+        self._setup(grd, *args, **kwargs)
 
 
     """ Public methods """
@@ -108,7 +108,8 @@ class Grid(object):
 
 
     """ Setup any required internal data structures """
-    def _setup(self, grd, nonLocal, *args, **kwargs):
+    def _setup(self, grd, *args, **kwargs):
+        nonLocal = kwargs.pop('nonLocal', False)
         self._init_patches(grd, nonLocal, *args, **kwargs)
 
         # Setup internal data structures
@@ -128,7 +129,6 @@ class Grid(object):
             dX = expand_dims(dX, self.dim)
             N  = expand_dims(N,  self.dim)
             x0 = expand_dims(x0, self.dim)
-
 
         for i in range(nop):
             self.patches[i] = Patch(self.n, i + 1, x0[i], dX[i], N[i],
