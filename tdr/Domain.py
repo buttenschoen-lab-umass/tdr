@@ -19,8 +19,7 @@ class Interval(SimulationObject):
     def __init__(self, a = 0, b = 1, *args, **kwargs):
         # set the basic parameters
         self.name               = kwargs.pop('name', 'x')
-        self.x0                 = a
-        self.xf                 = b
+        self.endPoints          = np.array([a, b])
 
         # number of patches -> in 1D always one
         self.nop                = 1
@@ -46,6 +45,17 @@ class Interval(SimulationObject):
 
         # call reset
         self._reset()
+
+
+    """ Properties """
+    @property
+    def x0(self):
+        return self.endPoints[0]
+
+
+    @property
+    def xf(self):
+        return self.endPoints[1]
 
 
     """ Creation """
@@ -80,6 +90,10 @@ class Interval(SimulationObject):
     class Factory:
         def create(self, *args, **kwargs):
             return Interval(*args, **kwargs)
+
+
+    def set_y(self, y):
+        self.endPoints = y
 
 
     """ Internal methods """
@@ -157,11 +171,18 @@ class Interval(SimulationObject):
 
     """ deformation support """
     def deform(self, newPosition):
-        self.x0         = newPosition[0]
-        self.xf         = newPosition[1]
+        self.endPoints  = newPosition
         self.x          = self.xs()
         self.h          = self.x[1] - self.x[0]
         self.dX         = asarray(self.h)
+
+
+    """ Update all the interval information """
+    def update(self):
+        self.x          = self.xs()
+        self.h          = self.x[1] - self.x[0]
+        self.dX         = asarray(self.h)
+
 
 
 """

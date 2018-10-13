@@ -282,7 +282,7 @@ class TDR(object):
             if self.hasDeformation():
                 # setup cFunctional
                 L0 = self.dom.L
-                cFunctional = lambda t : trans / (L0 * deformation[0,0](t))**2
+                cFunctional = lambda t, y : trans / (L0 * deformation[0,0](t, y))**2
                 dFlux_kwargs['cFunctional'] = cFunctional
 
             dFlux = DiffusionFlux(self.size, self.dimensions, trans, **dFlux_kwargs)

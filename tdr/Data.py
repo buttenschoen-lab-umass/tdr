@@ -191,8 +191,8 @@ class Data(object):
         if self.deformation is None or self.deformation_dt is None:
             return
 
-        assert self.deformation(0) == 1., 'Deformation must return 1. for time zero!'
-        self.r = self.deformation(0)
+        #assert self.deformation(0, 0) == 1., 'Deformation must return 1. for time zero!'
+        #self.r = self.deformation(0, 0)
 
 
     """ reset """
@@ -211,9 +211,9 @@ class Data(object):
 
 
     """ update length information """
-    def deform(self, t):
-        self.r                  = self.deformation(t)
-        self.dr                 = self.deformation_dt(t)
+    def deform(self, t, y):
+        self.r                  = self.deformation(t, y)
+        self.dr                 = self.deformation_dt(t, y)
 
         assert self.r > 0., 'Domain scaling factor cannot be non-positive!'
 
@@ -252,7 +252,7 @@ class Data(object):
 
         # do possible deformation
         if self.deformation is not None:
-            self.deform(t)
+            self.deform(t, y)
 
         # Finally reset
         self._reset()

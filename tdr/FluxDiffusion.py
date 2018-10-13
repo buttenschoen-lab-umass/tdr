@@ -24,7 +24,8 @@ class DiffusionFlux(Flux):
 
     """ update constants """
     def update(self, t):
-        self.trans = self.cFunctional(t)
+        # HACK
+        self.trans = self.cFunctional(t, 0)
 
 
     """ setup the flux """
