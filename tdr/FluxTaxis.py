@@ -30,6 +30,11 @@ class TaxisFlux(Flux):
         self._priority   = 20
 
 
+    """ Name """
+    def __str__(self):
+        return 'Taxis'
+
+
     """ Setup """
     def _setup(self):
         if self.dim == 1:

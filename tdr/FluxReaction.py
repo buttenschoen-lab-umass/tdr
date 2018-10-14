@@ -14,6 +14,11 @@ class ReactionFlux(Flux):
         self._priority = 5
 
 
+    """ Name """
+    def __str__(self):
+        return 'Reaction'
+
+
     """ setup function """
     def _setup(self):
         assert self.dim == 1, 'Reaction Flux not implemented for dimension %d.' % self.dim

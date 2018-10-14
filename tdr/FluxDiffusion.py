@@ -16,6 +16,11 @@ class DiffusionFlux(Flux):
         self._priority  = 10
 
 
+    """ Name """
+    def __str__(self):
+        return 'Diffusion'
+
+
     """ internal call """
     def __call__(self, patch):
         for i in range(self.n):

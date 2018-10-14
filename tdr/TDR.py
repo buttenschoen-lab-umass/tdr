@@ -194,22 +194,34 @@ class TDR(object):
             raise ValueError("Encountered NaN in TDR update at time: %.4g" % t)
 
         if np.any(y < 0.):
-            raise ValueError("Encountered non-positive values in TDR update at time: %.4g" % t)
+            raise ValueError("Encountered non-positive values (%.4g) @ %d in TDR"\
+                             " update at time: %.4g" % (np.min(y), np.argmin(y), t))
 
         if np.any(np.abs(y) > 1.e5):
             raise ValueError("Encountered too large values in TDR update at time: %.4g" % t)
 
 
+    def _check_ydot(self, t, y):
+        # check that we dont have NaN values
+        if np.any(np.isnan(y)):
+            raise ValueError("Encountered NaN in TDR ydot computation at time: %.4g" % t)
+
+        if np.any(np.abs(y) > 1.e5):
+            raise ValueError("Encountered too large values in TDR ydot computation at time: %.4g" % t)
+
+
     """ This is the entry point for the integrator """
     def __call__(self, t, y):
-        if self.debug:
-            self._check_solution(t, y)
+        if self.debug: self._check_solution(t, y)
 
         # update everything
         self.update(t, y)
 
         # dev check!
-        assert self.ydot is not None, ''
+        assert self.ydot is not None, 'In TDR update ydot is None!'
+
+        # also debug check ydot
+        if self.debug: self._check_ydot(t, self.ydot)
 
         # return the new ydot
         return self.ydot
@@ -331,6 +343,7 @@ class TDR(object):
         # compute the fluxes
         for flux in self.fluxes:
             self.grid.apply_flux(flux)
+            #print('ydot_post_%s:' % flux, self.grid.get_ydot())
 
         self.ydot = self.grid.get_ydot()
 
