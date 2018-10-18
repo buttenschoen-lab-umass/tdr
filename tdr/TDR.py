@@ -188,14 +188,26 @@ class TDR(object):
         return self.bw
 
 
+    """ TODO These functions have to be implemented via the solout callback!  """
     def _check_solution(self, t, y):
         # check that we dont have NaN values
         if np.any(np.isnan(y)):
             raise ValueError("Encountered NaN in TDR update at time: %.4g" % t)
 
         if np.any(y < 0.):
+            #print('y:', y)
+            #print('ydot:', self.ydot)
+            idx = np.argmin(y)
+
+            flux = self.fluxTerms['diffusion']
+            print('D:', flux.trans)
+
+            dilution = self.fluxTerms['dilution']
+            print('Dil:', dilution.Hd)
+
             raise ValueError("Encountered non-positive values (%.4g) @ %d in TDR"\
-                             " update at time: %.4g" % (np.min(y), np.argmin(y), t))
+                             " update at time: %.4g. ydot: %.4g" %
+                             (np.min(y), np.argmin(y), t, self.ydot[idx]))
 
         if np.any(np.abs(y) > 1.e5):
             raise ValueError("Encountered too large values in TDR update at time: %.4g" % t)
