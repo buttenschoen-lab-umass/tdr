@@ -17,7 +17,23 @@ def PeriodicGradient(u):
 # the vanLeer limiter
 VanLeer     = lambda r : (r + np.abs(r)) / (1. + np.abs(r))
 FirstOrder  = lambda r : 0.
-Koren       = lambda r : np.max(0., np.min(2., np.min(2. * r, (1. + 2. * r) / 3.)))
+
+
+def KorenLimiterFactory(kappa = 1. / 3):
+    Koren = lambda r : np.max(0., np.min((2. * r, 2., 0.5 * (1. - kappa + (1. + kappa) * r))))
+    return Koren
+
+
+def LimiterFactory(limiter_name):
+    limiter_name = limiter_name.lower()
+    if limiter_name == 'vanleer':
+        return VanLeer
+    elif limiter_name == 'koren':
+        return KorenLimiterFactory()
+    elif limiter_name == 'firstorder':
+        return FirstOrder
+    else:
+        assert False, 'Unknown limiter %s.' % limiter_name
 
 
 def asarray(obj, dtype=None):

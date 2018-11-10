@@ -5,7 +5,7 @@ from __future__ import print_function, division
 
 import numpy as np
 
-from tdr.utils import VanLeer
+from tdr.utils import LimiterFactory
 from tdr.Flux import Flux
 
 
@@ -21,7 +21,7 @@ class AdvectionFlux(Flux):
 
         # extra vars for Taxis Flux
         self.velNonZero = False
-        self.limiter    = VanLeer
+        self.limiter    = LimiterFactory(kwargs.pop('limiter', 'vanLeer'))
 
         # set priority
         self._priority   = 20
@@ -29,7 +29,7 @@ class AdvectionFlux(Flux):
 
     """ Name """
     def __str__(self):
-        return 'Taxis'
+        return 'Advection'
 
 
     """ Setup """
