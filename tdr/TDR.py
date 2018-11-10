@@ -13,6 +13,7 @@ from tdr.Grid import Grid
 # fluxes
 from tdr.FluxDiffusion import DiffusionFlux
 from tdr.FluxTaxis import TaxisFlux
+from tdr.FluxAdvection import AdvectionFlux
 from tdr.FluxReaction import ReactionFlux
 from tdr.FluxDilution import DilutionFlux
 
@@ -102,6 +103,13 @@ from tdr.utils import zeros, asarray, offdiagonal
 
             H_(R) = p(t, xi, Ui, C.,j)
 
+
+        4) Advection
+
+                       1
+            H_(A) = - --- Finish me
+                       h
+
 """
 class TDR(object):
     def __init__(self, *args, **kwargs):
@@ -113,6 +121,7 @@ class TDR(object):
 
         # for easy checking of requirements
         self.haveReactionTerms      = False
+        self.haveAdvectionTerms     = False
         self.haveDiffusionTerms     = False
         self.haveTaxisTerms         = False
         self.haveNonLocalTerms      = False
@@ -166,6 +175,10 @@ class TDR(object):
         return self.haveReactionTerms
 
 
+    def hasAdvection(self):
+        return self.haveAdvectionTerms
+
+
     """ The next two are equivalent at the moment for easy checking for any
         deformations that may be occurings.
     """
@@ -180,7 +193,7 @@ class TDR(object):
     """ compute required boundaryWidth """
     def get_bw(self):
         # TEMP FIGURE THIS OUT!!
-        if self.hasTransport() or self.hasDiffusion():
+        if self.hasTransport() or self.hasDiffusion() or self.hasAdvection():
             return np.max(2, self.bw)
         #elif self.hasDiffusion():
         #    return np.max(1, self.bw)
@@ -269,19 +282,21 @@ class TDR(object):
         print('TDR: registered domain %s.' % self.dom)
 
         # load transition matrices
-        trans    = asarray(kwargs.pop('transitionMatrix',           zeros(self.size)))
-        Adhtrans = asarray(kwargs.pop('AdhesionTransitionMatrix',   zeros(self.size)))
-        reaction = asarray(kwargs.pop('reactionTerms',              np.full(self.size, None)))
+        trans      = asarray(kwargs.pop('transitionMatrix',           zeros(self.size)))
+        advection  = asarray(kwargs.pop('transport',                  zeros(self.size)))
+        Adhtrans   = asarray(kwargs.pop('AdhesionTransitionMatrix',   zeros(self.size)))
+        reaction   = asarray(kwargs.pop('reactionTerms',              np.full(self.size, None)))
 
         # These should be shared among all players on the domain!
         deformation = asarray(kwargs.pop('r',                       None))
         dr          = asarray(kwargs.pop('dr',                      None))
 
-        self.haveDiffusionTerms = np.any(np.diagonal(trans) != 0)
-        self.haveReactionTerms  = np.any(reaction != None)
-        self.haveNonLocalTerms  = np.any(Adhtrans != 0)
-        self.haveTaxisTerms     = np.any(offdiagonal(trans) != 0)
-        self.haveDilutionTerms  = np.any(deformation != None)
+        self.haveDiffusionTerms = np.any(np.diagonal(trans)  != 0)
+        self.haveReactionTerms  = np.any(reaction            != None)
+        self.haveNonLocalTerms  = np.any(Adhtrans            != 0)
+        self.haveTaxisTerms     = np.any(offdiagonal(trans)  != 0)
+        self.haveDilutionTerms  = np.any(deformation         != None)
+        self.haveAdvectionTerms = np.any(advection           != 0)
 
         if self.hasDeformation():
             # make sure we both have r and dr
@@ -317,6 +332,12 @@ class TDR(object):
             tFlux = TaxisFlux(self.size, self.dimensions, trans, Adhtrans,
                               nonLocal=self.hasNonLocal(), boundary=dom.bd)
             self.fluxTerms['taxis'] = tFlux
+
+
+        if self.hasAdvection():
+            aFlux = AdvectionFlux(self.size, self.dimensions, advection,
+                                  boundary=dom.bd)
+            self.fluxTerms['advection'] = aFlux
 
 
         if self.hasReaction():
