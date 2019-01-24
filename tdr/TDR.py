@@ -337,9 +337,12 @@ class TDR(object):
     """ update between solver steps """
     def update(self, t, y):
         self.t = t
+
         # TODO Can i get rid of this potential copy here?
+        # Is this even really a copy?
         self.y = self.reshape(y)
 
+        # update the grid!
         self.grid.update(t, self.y)
 
         # TODO: FIXME
@@ -355,7 +358,6 @@ class TDR(object):
         # compute the fluxes
         for flux in self.fluxes:
             self.grid.apply_flux(flux)
-            #print('ydot_post_%s:' % flux, self.grid.get_ydot())
 
         self.ydot = self.grid.get_ydot()
 
