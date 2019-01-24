@@ -375,6 +375,19 @@ class TDR(object):
         pass
 
 
+    """ output """
+    def __str__(self):
+        # TODO improve this
+        rstr = 'TDR has:\n'
+        if self.haveDiffusionTerms: rstr += '\tdiffusion term.'
+        if self.haveReactionTerms: rstr += '\treaction term.'
+        if self.haveNonLocalTerms: rstr += '\tnon-local term.'
+        if self.haveDilutionTerms: rstr += '\tdilution term.'
+        if self.haveAdvectionTerms: rstr += '\tadvection term.'
+        if self.haveTaxisTerms: rstr += '\ttaxis term.'
+        return rstr
+
+
 if __name__ == '__main__':
     print('Testing TDR')
     # create data object
