@@ -126,12 +126,12 @@ class Dirichlet(Boundary):
         super(Dirichlet, self).__init__(name = "Dirichlet", oNormal = oNormal)
         self.values = np.abs(values)
         self.mask   = None
-        self._create_mask()
+        self._create_mask(values)
 
 
     """ setup helpers """
-    def _create_mask(self):
-        self.mask   = np.array(np.maximum(0., -1 * np.sign(self.values) * self.oNormal),
+    def _create_mask(self, values):
+        self.mask   = np.array(np.maximum(0., -1 * np.sign(values) * self.oNormal),
                                dtype=np.bool)
 
 
