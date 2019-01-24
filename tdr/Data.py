@@ -365,8 +365,6 @@ class Data(object):
         self.boundary_approx[:, 0] = self.boundary.left(y)
         self.boundary_approx[:, 1] = self.boundary.right(y)
 
-        #print('bd:', self.boundary_approx)
-
 
     """ Compute the boundary face taxis approximation """
     def get_bd_taxis(self, i, v):
