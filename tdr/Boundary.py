@@ -125,8 +125,14 @@ class Dirichlet(Boundary):
     def __init__(self, oNormal, values):
         super(Dirichlet, self).__init__(name = "Dirichlet", oNormal = oNormal)
         self.values = np.abs(values)
-        self.mask   = np.array(np.maximum(0., -1 * np.sign(values) * self.oNormal), dtype=np.bool)
-        print('mask:', self.mask, ' n:', self.oNormal)
+        self.mask   = None
+        self._create_mask()
+
+
+    """ setup helpers """
+    def _create_mask(self):
+        self.mask   = np.array(np.maximum(0., -1 * np.sign(self.values) * self.oNormal),
+                               dtype=np.bool)
 
 
     """ Factory """
@@ -139,15 +145,17 @@ class Dirichlet(Boundary):
     def __call__(self, y):
         # left and right boundary values
         yb = None
-        if self.oNormal < -1.:
+        if self.oNormal < 0.:
             # left boundary
             yb = y[:, 0]
         else:
             yb = y[:, -1]
 
+        # Careful this is for a set of two hyperbolic equations
         m  = self.mask
         nm = ~m
-        return m * np.flip(self.values * yb) / self.values + nm * yb
+        val =  m * np.flip(self.values * yb) / self.values + nm * yb
+        return val
 
 
     """ get boundary mask """
