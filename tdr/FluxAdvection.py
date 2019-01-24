@@ -38,7 +38,9 @@ class AdvectionFlux(Flux):
             self._advCall = self._flux_1d
             self._finish    = self._finish_1d
 
-            if self.bd.isNoFlux():
+            # we can use the same function as Data takes care of all the
+            # important logic!
+            if self.bd.isNoFlux() or self.bd.isDirichlet():
                 self._bc_call = self._noflux_bc_1d
             else:
                 self._bc_call = self._dummy_bc_1d
@@ -147,5 +149,4 @@ class AdvectionFlux(Flux):
         # TODO: Deal with zero diffusion constants etc.
         taxisApprox[[0, -1]] = patch.data.get_bd_taxis(i, self.vij[[0, -1]])
         return
-
 

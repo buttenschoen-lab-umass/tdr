@@ -171,7 +171,9 @@ class Data(object):
             assert rBoundary.isNoFlux(), 'Error: Both boundaries are required to be Neumann!'
             self._boundary_helper = self._noflux_set_values_helper
         elif lBoundary.isDirichlet() or rBoundary.isDirichlet():
-            assert False, 'Dirichlet boundary conditions not implemented!'
+            assert lBoundary.isDirichlet(), 'Error: Both boundaries are required to be Dirichlet!'
+            assert rBoundary.isDirichlet(), 'Error: Both boundaries are required to be Dirichlet!'
+            self._boundary_helper = self._dirichlet_set_values_helpers
         else:
             print("WARNING: No special boundary handling enabled!")
 
@@ -306,6 +308,35 @@ class Data(object):
         self._compute_boundary_approx_1d(bw)
 
 
+    def _dirichlet_set_values_helpers(self, bw, nx):
+        # use the above mentioned extrapolations
+        y = self.y[:, bw:-bw]
+
+        # Left Boundary
+
+        # This setups the boundary as follows: Here || denotes the boundary
+        # | alpha_D | alpha_D || y0 | y1 |
+        mask = self.boundary.left.bc_mask()
+        nask = self.boundary.left.nbc_mask()
+
+        # in some place we need to reflect for NoBC
+        nCb = np.arange(bw, 0, -1) - 1
+        self.y[:, 0:bw] = mask * self.boundary.left(y) + nask * self.y[:, nCb + bw]
+
+        # Right Boundary
+        # This setups the boundary as follows: Here || denotes the boundary
+        # | yN-1 | yN || alpha_D | alpha_D |
+        mask = self.boundary.right.bc_mask()
+        nask = self.boundary.right.nbc_mask()
+
+        Cb  = np.arange(0, bw)
+        nCb = np.arange(1, -bw+1, -1)
+        self.y[:, Cb + nx + bw] = mask * self.boundary.right(y) + nask * self.y[:, nCb + nx]
+
+        # setup boundary approximations
+        self._compute_boundary_approx_dirichlet_1d(bw)
+
+
     """ compute boundary approximations in 1d """
     def _compute_boundary_approx_1d(self, bw):
         self.boundary_approx    = np.empty((self.n, 2))
@@ -318,6 +349,23 @@ class Data(object):
         # Here we enforce positivity!
         self.boundary_approx[:, 0] = np.maximum(0, y[:, 0]  + 0.5 * (y[:, 1]  - y[:, 0]))
         self.boundary_approx[:, 1] = np.maximum(0, y[:, -1] - 0.5 * (y[:, -2] - y[:, -1]))
+
+
+    """ compute boundary approximations for dirichlet conditions in 1d """
+    # ATTENTION these are currently setup for a system of hyperbolic equations!
+    def _compute_boundary_approx_dirichlet_1d(self, bw):
+        self.boundary_approx    = np.empty((self.n, 2))
+        self.taxis_bd_aprx      = np.empty((self.n, 2))
+        self.diffusion_bd_aprx  = np.empty((self.n, 2))
+
+        # use the above mentioned extrapolations
+        y = self.y[:, bw:-bw]
+
+        # Here we enforce positivity!
+        self.boundary_approx[:, 0] = self.boundary.left(y)
+        self.boundary_approx[:, 1] = self.boundary.right(y)
+
+        #print('bd:', self.boundary_approx)
 
 
     """ Compute the boundary face taxis approximation """

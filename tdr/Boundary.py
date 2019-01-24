@@ -122,15 +122,42 @@ class NoFlux(Boundary):
 
 
 class Dirichlet(Boundary):
-    def __init__(self, oNormal, value = 0.):
+    def __init__(self, oNormal, values):
         super(Dirichlet, self).__init__(name = "Dirichlet", oNormal = oNormal)
-        self.value = value
+        self.values = np.abs(values)
+        self.mask   = np.array(np.maximum(0., -1 * np.sign(values) * self.oNormal), dtype=np.bool)
+        print('mask:', self.mask, ' n:', self.oNormal)
 
 
     """ Factory """
     class Factory:
         def create(self, *args, **kwargs):
             return Dirichlet(*args, **kwargs)
+
+
+    """ call """
+    def __call__(self, y):
+        # left and right boundary values
+        yb = None
+        if self.oNormal < -1.:
+            # left boundary
+            yb = y[:, 0]
+        else:
+            yb = y[:, -1]
+
+        m  = self.mask
+        nm = ~m
+        return m * np.flip(self.values * yb) / self.values + nm * yb
+
+
+    """ get boundary mask """
+    def bc_mask(self):
+        return self.mask
+
+
+    """ where no boundary conditions are defined """
+    def nbc_mask(self):
+        return ~self.mask
 
 
 """
