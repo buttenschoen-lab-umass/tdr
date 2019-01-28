@@ -94,8 +94,8 @@ class Patch(object):
         return self.x0 + self.length()
 
 
-    def apply_flux(self, flux):
-        flux(self)
+    def apply_flux(self, flux, t):
+        flux(self, t)
 
 
     def step_size(self):

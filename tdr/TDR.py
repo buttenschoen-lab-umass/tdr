@@ -357,7 +357,7 @@ class TDR(object):
 
         # compute the fluxes
         for flux in self.fluxes:
-            self.grid.apply_flux(flux)
+            self.grid.apply_flux(flux, t)
 
         self.ydot = self.grid.get_ydot()
 

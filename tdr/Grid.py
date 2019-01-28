@@ -52,9 +52,9 @@ class Grid(object):
 
 
     """ Apply fluxes for all patches """
-    def apply_flux(self, flux):
+    def apply_flux(self, flux, t):
         for patch in self.patches.values():
-            patch.apply_flux(flux)
+            patch.apply_flux(flux, t)
 
 
     def get_dx(self, patchId):
