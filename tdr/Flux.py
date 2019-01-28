@@ -29,8 +29,8 @@ class Flux(object):
 
 
     """ Functor """
-    def __call__(self, patch):
-        self.call(patch)
+    def __call__(self, patch, t):
+        self.call(patch, t)
 
 
     """ update constants """

@@ -26,11 +26,14 @@ class ReactionFlux(Flux):
 
 
     """ 1D - Implementation """
-    def _flux_1d(self, patch):
+    def _flux_1d(self, patch, t):
         # Compute reaction term for each of the PDEs
         # It seems easier to do this all at once, since these things may depend
         # on each other.
-        Hr = apply_along_column(self.trans, patch.data.y[:, patch.bW:-patch.bW])
+
+        # TODO deal with the spatial dependence of this better!!! use
+        # signature!
+        Hr = apply_along_column(self.trans, patch.data.y[:, patch.bW:-patch.bW], patch.xc, t)
 
         # cut of the boundary width
         patch.data.ydot += Hr

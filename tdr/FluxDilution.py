@@ -31,7 +31,7 @@ class DilutionFlux(Flux):
 
 
     """ 1D - Implementation """
-    def _flux_1d(self, patch):
+    def _flux_1d(self, patch, t):
         # Compute reaction term for each of the PDEs
         # It seems easier to do this all at once, since these things may depend
         # on each other.

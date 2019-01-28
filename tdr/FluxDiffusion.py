@@ -22,9 +22,9 @@ class DiffusionFlux(Flux):
 
 
     """ internal call """
-    def __call__(self, patch):
+    def __call__(self, patch, t):
         for i in range(self.n):
-            self.call(i, patch)
+            self.call(i, patch, t)
 
 
     """ update constants """
@@ -54,7 +54,7 @@ class DiffusionFlux(Flux):
 
 
     """ Computational details: The functions compute H_D(U, i). """
-    def _flux_1d_periodic(self, i, patch):
+    def _flux_1d_periodic(self, i, patch, t):
         pii   = self.trans[i, i]
         uDx   = patch.data.uDx[i, :]
         Hd    = (pii / patch.step_size()) * (uDx[1:] - uDx[:-1])
@@ -63,7 +63,7 @@ class DiffusionFlux(Flux):
         patch.data.ydot[i, :] += Hd
 
 
-    def _flux_1d_noflux(self, i, patch):
+    def _flux_1d_noflux(self, i, patch, t):
         pii   = self.trans[i, i]
         uDx   = patch.data.uDx[i, :]
 
@@ -82,7 +82,7 @@ class DiffusionFlux(Flux):
 
 
     """ 2D - Implementation """
-    def _flux_2d_periodic(self, i, patch):
+    def _flux_2d_periodic(self, i, patch, t):
         pii   = self.trans[i, i]
         uDx   = patch.data.uDx[i, :]
         uDy   = patch.data.uDy[i, :]
