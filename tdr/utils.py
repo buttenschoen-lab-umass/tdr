@@ -75,7 +75,7 @@ def offdiagonal(arr):
     return arr - diag
 
 
-def apply_along_column(functions, arr):
+def apply_along_column(functions, arr, x=None, t=None):
     """
     Apply a 1D-array to functions column wise to data in arr
 
@@ -105,6 +105,8 @@ def apply_along_column(functions, arr):
         function = functions[row]
         if function is None:
             outarray[row, :] = 0
+        elif x is not None:
+            outarray[row, :] = function(t, x, *rows)
         else:
             outarray[row, :] = function(*rows)
 
