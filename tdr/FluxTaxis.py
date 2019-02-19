@@ -59,7 +59,7 @@ class TaxisFlux(Flux):
 
 
     """ Call function """
-    def _simple_call(self, patch):
+    def _simple_call(self, patch, t):
         # compute the flux for each of the PDEs
         # TODO: test
         bw = patch.boundaryWidth
