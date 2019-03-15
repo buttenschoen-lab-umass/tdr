@@ -150,3 +150,4 @@ class AdvectionFlux(Flux):
         taxisApprox[[0, -1]] = patch.data.get_bd_taxis(i, self.vij[[0, -1]])
         return
 
+

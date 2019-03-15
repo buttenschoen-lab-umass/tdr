@@ -44,6 +44,8 @@ class TaxisFlux(Flux):
 
             if self.bd.isNoFlux():
                 self._bc_call = self._noflux_bc_1d
+            elif self.bd.isNeumann():
+                self._bc_call = self._neumann_bc_1d
             else:
                 self._bc_call = self._dummy_bc_1d
 
@@ -105,7 +107,6 @@ class TaxisFlux(Flux):
 
         # TODO suppose that the coefficient is constant for the moment
         pij   = self.trans[i, j]
-        #print('p[%d, %d]: %.2f:' % (i,j,pij))
         if pij != 0.:
             self.velNonZero = True
             uDx = patch.data.uDx[j, :]
@@ -118,7 +119,6 @@ class TaxisFlux(Flux):
 
         # TODO suppose that the coefficient is constant for the moment
         pij   = self.trans[i, j]
-        #print('p[%d, %d]: %.2f:' % (i,j,pij))
         if pij != 0.:
             self.velNonZero = True
             uDx = patch.data.uDx[j, :]
@@ -262,6 +262,14 @@ class TaxisFlux(Flux):
 
         # Now compute HT
         patch.data.ydot[i, :] -= (1. / dx[1]) * (taxisApprox[:, 1:] - taxisApprox[:, :-1])
+
+
+    """ Modifications required for Neumann bc """
+    def _neumann_bc_1d(self, i, patch, taxisApprox):
+        taxisApprox[[0, -1]] = np.zeros_like(self.vij[[0, -1]])
+        return
+
+
 
 
 if __name__ == '__main__':

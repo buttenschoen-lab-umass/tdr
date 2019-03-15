@@ -57,10 +57,9 @@ class DiffusionFlux(Flux):
     def _flux_1d_periodic(self, i, patch, t):
         pii   = self.trans[i, i]
         uDx   = patch.data.uDx[i, :]
-        Hd    = (pii / patch.step_size()) * (uDx[1:] - uDx[:-1])
 
         # set ydot in data
-        patch.data.ydot[i, :] += Hd
+        patch.data.ydot[i, :] += (pii / patch.step_size()) * (uDx[1:] - uDx[:-1])
 
 
     def _flux_1d_noflux(self, i, patch, t):
@@ -74,11 +73,8 @@ class DiffusionFlux(Flux):
         coefficient = (patch.step_size() / pii) * np.array([-1, 1])
         patch.data.update_ghost_points_noflux(i, coefficient)
 
-        # compute Hd
-        Hd      = (pii / patch.step_size()) * (uDx[1:] - uDx[:-1])
-
         # set ydot in data
-        patch.data.ydot[i, :] += Hd
+        patch.data.ydot[i, :] += (pii / patch.step_size()) * (uDx[1:] - uDx[:-1])
 
 
     """ 2D - Implementation """
