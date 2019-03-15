@@ -90,7 +90,8 @@ class NonLocalGradient:
     """ No-flux evaluation """
     def _eval_noflux(self, u):
         # hmm u has shape (1, N)
-        u = u[0]
+        if len(u.shape)==2:
+            u = u[0]
         bw = 2*self.M
         #print('u:', u.shape, ' M:', self.M,' bw:',bw)
         z = ifft(np.tile(self.circFFT, (1, 1)) * fft(u))[0]
@@ -115,6 +116,9 @@ class NonLocalGradient:
 
         # add correction terms. At the moment we assume that we only have
         # uniform kernels
+        #print('corrLhs:', self.correction_lhs[0:5])
+        #print('corrRhs:', self.correction_rhs[-5:])
+
         z[:self.M]  += self.correction_lhs
         z[-self.M:] += self.correction_rhs
 
@@ -143,10 +147,14 @@ class NonLocalGradient:
         elif self.mode == 'no-flux-reflect':
             print('Computing integration weights for no-flux reflect bcs.')
             self._init_weights_periodic()
+        elif self.mode == 'no-flux-weakly-adhesive':
+            print('Computing integration weights for %s bcs.' % self.mode)
+            self._init_weights_periodic()
+            self._init_weights_weakly_adhesive(indices=self._get_indices)
         elif self.mode == 'weakly-adhesive' or self.mode == 'naive':
             print('Computing integration weights for %s bcs.' % self.mode)
             self._init_weights_periodic()
-            self._init_weights_weakly_adhesive()
+            self._init_weights_weakly_adhesive(indices=self._get_indices_naive)
         else:
             assert False, 'Unknown non-local gradient mode %s.' % self.mode
 
@@ -161,6 +169,11 @@ class NonLocalGradient:
         elif self.mode == 'no-flux-reflect':
             self._eval = self._eval_pp
             self._init_bcs_periodic()
+        elif self.mode == 'no-flux-weakly-adhesive':
+            print('Using no-flux-weakly-adhesive non-local gradient mode:')
+            print('\tWith β = (%.4g, %.4g).' % (self.beta0, self.betaL))
+            self._eval = self._eval_weakly_adhesive
+            self._init_bcs_weakly_adhesive()
         elif self.mode == 'naive':
             self._eval = self._eval_weakly_adhesive
             self._init_bcs_weakly_adhesive()
@@ -331,7 +344,7 @@ class NonLocalGradient:
         self.circ = circ[NSO2:-NSO2, NSO2:-NSO2]
 
 
-    """ Weakly adhesive no-flux implementation """
+    """ Weakly adhesive no-flux implementation with naive E(x) """
     def _get_indices_naive(self, x):
         R = self.R
         L = self.L
@@ -349,9 +362,12 @@ class NonLocalGradient:
         return idxs.astype(int)
 
 
-    def _init_weights_weakly_adhesive(self):
+    def _init_weights_weakly_adhesive(self, indices=None):
         self.weights_bc = np.zeros((self.M, self.lm + self.lp + 1))
         xi = (self.lm + 4.5) * self.h
+
+        if indices is None:
+            indices=self._get_indices_naive
 
         # get all the x indices
         x_idxs = np.arange(0, self.M, 1)
@@ -359,7 +375,7 @@ class NonLocalGradient:
             xk = (i/self.N1) * self.L
 
             # integration indices
-            idxs = self._get_indices_naive(xk)
+            idxs = indices(xk)
 
             int_kernel = self._integration_kernel()
             for j in idxs:
@@ -415,10 +431,22 @@ class NonLocalGradient:
         # compute correction terms
         xs = np.linspace(0, self.L - self.h, self.N2)
 
-        self.correction_lhs = self.beta0 * (xs[:self.M] - self.R) / (2. * self.R)
-        self.correction_rhs = self.betaL * (self.R - (self.L - xs[-self.M:])) / (2. * self.R)
+        # only do the constant kernel version for the moment
+        if self.mode == 'no-flux-weakly-adhesive':
+            self.correction_lhs     = self.beta0 * (xs[:self.M]) * (xs[:self.M] - self.R) / (2. * self.R)
+            #self.correction_lhs[0]  = 0
+            self.correction_rhs     = self.betaL * (self.L - xs[-self.M:]) * (self.R - (self.L - xs[-self.M:])) / (2. * self.R)
+            #self.correction_rhs[-1] = 0
+        else:
+            self.correction_lhs = self.beta0 * (xs[:self.M] - self.R) / (2. * self.R)
+            self.correction_rhs = self.betaL * (self.R - (self.L - xs[-self.M:])) / (2. * self.R)
 
-        assert self.correction_lhs.size == self.M, 'Size is correction is incorrect!'
-        assert self.correction_rhs.size == self.M, 'Size is correction is incorrect!'
+        #print('xs:', xs[:self.M])
+        #print('xs:', (self.R - xs[:self.M]) / (2. * self.R))
 
+        #print('corrLhs:', self.correction_lhs)
+        #print('corrRhs:', self.correction_rhs)
+
+        assert self.correction_lhs.size == self.M, 'Size of correction is incorrect!'
+        assert self.correction_rhs.size == self.M, 'Size of correction is incorrect!'
 
