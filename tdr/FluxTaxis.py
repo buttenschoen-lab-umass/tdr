@@ -38,9 +38,13 @@ class TaxisFlux(Flux):
     """ Setup """
     def _setup(self):
         if self.dim == 1:
-            self._taxisCall = self._flux_1d
             self._adhCall   = self._adh_flux_1d
             self._finish    = self._finish_1d
+
+            if np.issubdtype(self.trans, np.number):
+                self._taxisCall = self._flux_1d_const
+            else:
+                self._taxisCall = self._flux_1d_variable
 
             if self.bd.isNoFlux():
                 self._bc_call = self._noflux_bc_1d
@@ -101,7 +105,8 @@ class TaxisFlux(Flux):
             assert False, 'not implemented for higher dimensions!'
 
 
-    def _flux_1d(self, i, j, patch):
+    """ 1D - flux approximation for constant coefficients """
+    def _flux_1d_const(self, i, j, patch):
         if i == j: # this means diffusion!
             return
 
@@ -113,6 +118,32 @@ class TaxisFlux(Flux):
             self.vij += pij * uDx
 
 
+    """ 1D - flux approximation for variable coefficients
+
+        Here it is assumed that the coefficient is only a function of quantity
+        from which the gradient is computed i.e.
+
+            p(c) grad(c)
+
+    """
+    def _flux_1d_variable(self, i, j, patch):
+        if i == j: # this means diffusion!
+            return
+
+        # TODO suppose that the coefficient is constant for the moment
+        pij   = self.trans[i, j]
+        if pij != 0.:
+            self.velNonZero = True
+
+            # get the state interpolatant
+            uDx  = patch.data.uDx[j, :]
+
+            # get the average to interpolate value on the cell boundary
+            uAvx = patch.data.uAvx[j, :]
+            self.vij += pij(uAvx) * uDx
+
+
+    """ 2D - flux approximation for constant coefficients """
     def _flux_2d(self, i, j, patch):
         if i == j: # this means diffusion!
             return
