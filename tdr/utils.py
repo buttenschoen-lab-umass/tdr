@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # Author: Andreas Buttenschoen
 import numpy as np
+import itertools
 
 # move to utils
 def PeriodicGradient(u):
@@ -71,8 +72,16 @@ def get_diagonal(arr):
 
 
 def offdiagonal(arr):
-    diag = get_diagonal(arr)
-    return arr - diag
+    sh = arr.shape
+    assert sh[0] == sh[1], 'Matrix must be square!'
+    rarr = np.zeros_like(arr)
+    for i, j in itertools.product(range(sh[0]), range(sh[1])):
+        if i == j:
+            continue
+
+        rarr[i, j] = arr[i, j]
+
+    return rarr
 
 
 def apply_along_column(functions, arr, x=None, t=None):
