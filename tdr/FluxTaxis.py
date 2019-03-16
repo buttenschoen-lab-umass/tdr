@@ -41,9 +41,11 @@ class TaxisFlux(Flux):
             self._adhCall   = self._adh_flux_1d
             self._finish    = self._finish_1d
 
-            if np.issubdtype(self.trans, np.number):
+            if np.issubdtype(self.trans.dtype, np.number):
+                print('Constant taxis coefficient!')
                 self._taxisCall = self._flux_1d_const
             else:
+                print('Variable taxis coefficient!')
                 self._taxisCall = self._flux_1d_variable
 
             if self.bd.isNoFlux():
