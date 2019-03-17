@@ -62,12 +62,21 @@ class DiffusionFlux(Flux):
         patch.data.ydot[i, :] += (pii / patch.step_size()) * (uDx[1:] - uDx[:-1])
 
 
+    """ Compute the diffusion flux approximation i.e. H_D when imposing no-flux
+        boundary conditions.
+
+        For this we set:
+
+            Τ(N, i^B) = v_{avg} α_D,
+
+        for the definition of α_D see _flux_1d_noflux in TaxisFlux, and we set:
+
+            D(N, i^B) = T(U, i^B) - ν α_F
+
+    """
     def _flux_1d_noflux(self, i, patch, t):
         pii   = self.trans[i, i]
         uDx   = patch.data.uDx[i, :]
-
-        # get bd corrections
-        uDx[[0, -1]] = patch.data.get_bd_diffusion(i)
 
         # call ghost point updater
         coefficient = (patch.step_size() / pii) * np.array([-1, 1])

@@ -142,6 +142,8 @@ class TaxisFlux(Flux):
 
             # get the average to interpolate value on the cell boundary
             uAvx = patch.data.uAvx[j, :]
+
+            # compute the velocities
             self.vij += pij(uAvx) * uDx
 
 
@@ -229,9 +231,20 @@ class TaxisFlux(Flux):
         pass
 
 
-    """ Modifications required for no-flux bc """
+    """ Modifications required for taxis flux in the presence of no-flux BC.
+        For this we set:
+
+            Τ(N, i^B) = v_{avg} α_D,
+
+        where
+
+            α_D = max[0, U(i) - 0.5[ U(i - ν ej) - U(i) ],
+
+        and v_{avg} is the average taxis velocity on the domain's boundary.
+
+    """
     def _noflux_bc_1d(self, i, patch, taxisApprox):
-        # TODO: Deal with zero diffusion constants etc.
+        # TODO: Deal with zero diffusion constants etc. and non-zero flux boundaries
         taxisApprox[[0, -1]] = patch.data.get_bd_taxis(i, self.vij[[0, -1]])
         return
 

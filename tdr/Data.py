@@ -173,7 +173,7 @@ class Data(object):
         elif lBoundary.isDirichlet() or rBoundary.isDirichlet():
             assert lBoundary.isDirichlet(), 'Error: Both boundaries are required to be Dirichlet!'
             assert rBoundary.isDirichlet(), 'Error: Both boundaries are required to be Dirichlet!'
-            self._boundary_helper = self._dirichlet_set_values_helpers
+            self._boundary_helper = self._dirichlet_set_values_helper
         else:
             print("WARNING: No special boundary handling enabled!")
 
@@ -288,6 +288,7 @@ class Data(object):
         self.y[:, Cb + nx + bw] = self.y[:, nCb + nx]
 
 
+    """ Implementation of no-flux boundary conditions """
     def _noflux_set_values_helper(self, bw, nx):
         # Left Boundary
 
@@ -305,10 +306,11 @@ class Data(object):
         self.y[:, Cb + nx + bw] = self.y[:, nCb + nx]
 
         # update boundary values
-        self._compute_boundary_approx_1d(bw)
+        self._compute_boundary_approx_noflux_1d(bw)
 
 
-    def _dirichlet_set_values_helpers(self, bw, nx):
+    """ Implementation of dirichlet boundary conditions """
+    def _dirichlet_set_values_helper(self, bw, nx):
         # use the above mentioned extrapolations
         y = self.y[:, bw:-bw]
 
@@ -337,11 +339,17 @@ class Data(object):
         self._compute_boundary_approx_dirichlet_1d(bw)
 
 
-    """ compute boundary approximations in 1d """
-    def _compute_boundary_approx_1d(self, bw):
-        self.boundary_approx    = np.empty((self.n, 2))
-        self.taxis_bd_aprx      = np.empty((self.n, 2))
-        self.diffusion_bd_aprx  = np.empty((self.n, 2))
+    """ Compute boundary approximations in the presence of no-flux BC in 1d.
+
+        This function computes α_D in the case of no-flux BC:
+
+            α_D = max[0, U(i) - 0.5[ U(i - ν ej) - U(i) ].
+
+    """
+    def _compute_boundary_approx_noflux_1d(self, bw):
+        self.boundary_approx    = np.zeros((self.n, 2))
+        self.taxis_bd_aprx      = np.zeros((self.n, 2))
+        self.diffusion_bd_aprx  = np.zeros((self.n, 2))
 
         # use the above mentioned extrapolations
         y = self.y[:, bw:-bw]
@@ -354,9 +362,9 @@ class Data(object):
     """ compute boundary approximations for dirichlet conditions in 1d """
     # ATTENTION these are currently setup for a system of hyperbolic equations!
     def _compute_boundary_approx_dirichlet_1d(self, bw):
-        self.boundary_approx    = np.empty((self.n, 2))
-        self.taxis_bd_aprx      = np.empty((self.n, 2))
-        self.diffusion_bd_aprx  = np.empty((self.n, 2))
+        self.boundary_approx    = np.zeros((self.n, 2))
+        self.taxis_bd_aprx      = np.zeros((self.n, 2))
+        self.diffusion_bd_aprx  = np.zeros((self.n, 2))
 
         # use the above mentioned extrapolations
         y = self.y[:, bw:-bw]
@@ -366,7 +374,7 @@ class Data(object):
         self.boundary_approx[:, 1] = self.boundary.right(y)
 
 
-    """ Compute the boundary face taxis approximation """
+    """ Compute the boundary face data for the taxis approximation """
     def get_bd_taxis(self, i, v):
         """ This is done in Data since we have to store these values! """
         self.taxis_bd_aprx[i, :] = v * self.boundary_approx[i, :]
@@ -381,11 +389,24 @@ class Data(object):
         return self.diffusion_bd_aprx[i, :]
 
 
-    """ Update the ghost points after imposing no-flux bc """
+    """ Update the ghost points after imposing no-flux bc
+
+        This function sets:
+
+        U(i + ν ej) = max[0, U(i) + ν h / ε D(U, i^B)]
+
+    """
     def update_ghost_points_noflux(self, i, coefficient):
         assert self.boundaryWidth == 2, 'Check implementation!'
-        zz = np.maximum(0., self.uDx[i, [0, -1]] * coefficient)
-        self.y[i, [1, -2]]  = zz
+        bw = self.boundaryWidth
+        dFluxBd = self.get_bd_diffusion(i)
+        zz = np.maximum(0., self.y[i, [bw, -bw-1]] + dFluxBd * coefficient)
+        self.y[i, [bw-1, -bw]]  = zz
+
+        # Need to update uDx near the boundary!
+        # TODO improve this!
+        self.uDx[i, :]  = (1. / self.dX[0]) * \
+                (self.y[i, bw:-bw+1] - self.y[i, bw-1:-bw])
 
 
     """ Set values """
