@@ -84,7 +84,7 @@ def offdiagonal(arr):
     return rarr
 
 
-def apply_along_column(functions, arr, x=None, t=None):
+def apply_along_column_var(functions, arr, t, x):
     """
     Apply a 1D-array to functions column wise to data in arr
 
@@ -114,12 +114,49 @@ def apply_along_column(functions, arr, x=None, t=None):
         function = functions[row]
         if function is None:
             outarray[row, :] = 0
-        elif x is not None:
+        else:
             outarray[row, :] = function(t, x, *rows)
+
+    return outarray
+
+
+""" TODO Deal with this in a better way """
+def apply_along_column(functions, arr):
+    """
+    Apply a 1D-array to functions column wise to data in arr
+
+    Parameters
+    ----------
+    functions: 1-D array of lambdas that take n arguments.
+
+    arr : ndarray
+        This is the data to which function is applied to column-wise. The
+        number of rows must match the length of functions.
+
+    Returns
+    -------
+    out : ndarray
+        2-D array of shape of arr. With the result of function is returned in
+        row i.
+    """
+    outarray = np.empty_like(arr, arr.dtype)
+
+    # create rows
+    rows = []
+    for row in range(arr.shape[0]):
+        rows.append(arr[row, :])
+
+    # apply the function row wise
+    for row in range(arr.shape[0]):
+        function = functions[row]
+        if function is None:
+            outarray[row, :] = 0
         else:
             outarray[row, :] = function(*rows)
 
     return outarray
+
+
 
 
 # https://stackoverflow.com/questions/1208118/using-numpy-to-build-an-array-of-all-combinations-of-two-arrays

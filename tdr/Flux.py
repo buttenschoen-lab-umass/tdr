@@ -33,6 +33,11 @@ class Flux(object):
         self.call(patch, t)
 
 
+    """ Name """
+    def __str__(self):
+        return 'Flux'
+
+
     """ update constants """
     def update(self, t):
         pass
