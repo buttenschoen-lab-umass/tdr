@@ -215,7 +215,7 @@ class TDR(object):
 
 
     """ This is the entry point for the integrator """
-    def __call__(self, t, y):
+    def __call__(self, t, y, rpar, ipar):
         if self.debug: self._check_solution(t, y)
 
         # update everything
@@ -332,6 +332,13 @@ class TDR(object):
         # sort the flux terms
         self.fluxes = sorted(self.fluxTerms.values(),
                              key=lambda flux : flux.priority(), reverse=True)
+
+
+        # print fluxes
+        print('Registered fluxes:', end=' ')
+        for flux in self.fluxes:
+            print(flux, end='; ')
+        print('', end='\n')
 
 
     """ update between solver steps """
