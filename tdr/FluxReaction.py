@@ -3,7 +3,7 @@
 # Author: Andreas Buttenschoen
 
 from tdr.Flux import Flux
-from tdr.utils import apply_along_column_var, apply_along_column,
+from tdr.utils import apply_along_column_var, apply_along_column
 from tdr.utils import get_function_signatures
 
 
