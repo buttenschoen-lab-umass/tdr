@@ -4,6 +4,9 @@
 import numpy as np
 import itertools
 
+from inspect import signature, Parameter
+
+
 # move to utils
 def PeriodicGradient(u):
     dx = np.zeros_like(u)
@@ -219,3 +222,26 @@ def round_to_nearest_fraction(number, n = 4):
     val = number * fraction
     val = np.ceil(val)
     return val / fraction
+
+
+def get_function_signatures(function_arr):
+    sigs = []
+    for i, func in enumerate(function_arr):
+        pars = signature(func).parameters
+
+        ptype = {'var' : 0, 'pos' : 0}
+        # iterate over pars
+        for par in pars.values():
+            if par.kind == Parameter.VAR_POSITIONAL:
+                ptype['var'] += 1
+            elif par.kind == Parameter.POSITIONAL_OR_KEYWORD or par.kind == Parameter.POSITIONAL_ONLY:
+                ptype['pos'] += 1
+            else:
+                assert False, 'Dealing with unknown parameter kind %s.' % par.kind
+
+        sigs.append(ptype)
+
+    return sigs
+
+
+

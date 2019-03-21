@@ -3,9 +3,8 @@
 # Author: Andreas Buttenschoen
 
 from tdr.Flux import Flux
-from tdr.utils import apply_along_column_var, apply_along_column
-
-from inspect import signature, Parameter
+from tdr.utils import apply_along_column_var, apply_along_column,
+from tdr.utils import get_function_signatures
 
 
 class ReactionFlux(Flux):
@@ -26,35 +25,31 @@ class ReactionFlux(Flux):
         assert self.dim == 1, 'Reaction Flux not implemented for dimension %d.' % self.dim
 
         # get signature of the functions in self.trans
-        sigs = []
-        for i, func in enumerate(self.trans):
-            pars = signature(func).parameters
-
-            ptype = {'var' : 0, 'pos' : 0}
-            # iterate over pars
-            for par in pars.values():
-                if par.kind == Parameter.VAR_POSITIONAL:
-                    ptype['var'] += 1
-                elif par.kind == Parameter.POSITIONAL_OR_KEYWORD or par.kind == Parameter.POSITIONAL_ONLY:
-                    ptype['pos'] += 1
-                else:
-                    assert False, 'Dealing with unknown parameter kind %s.' % par.kind
-
-            sigs.append(ptype)
+        sigs = get_function_signatures(self.trans)
 
         # check if these are unique
         sigs = list({v['pos']:v for v in sigs}.values())
         assert len(sigs)==1, 'We cannot handle with different calling signature for reaction terms yet!'
         sigs = sigs[0]
-        assert sigs['var']==1, 'Variable positional arguments must be one!'
 
-        if sigs['pos'] == 0:
-            self.call = self._flux_1d_const
-        elif sigs['pos'] == 1:
-            assert False, 'This case is not support yet!'
-            #self.rcall = self._flux_1d_const
-        elif sigs['pos'] == 2:
-            self.call = self._flux_1d_var21
+        # In this case all the density arrays are passed as *args
+        if sigs['var']==1:
+            if sigs['pos'] == 0:
+                self.call = self._flux_1d_const
+            elif sigs['pos'] == 1:
+                assert False, 'This case is not support yet!'
+                #self.rcall = self._flux_1d_const
+            elif sigs['pos'] == 2:
+                self.call = self._flux_1d_var21
+            else:
+                assert False, 'ReactionFlux: Should not get here!'
+        elif sigs['var'] == 0:
+            if sigs['pos'] == self.trans.size:
+                self.call = self._flux_1d_const
+            elif sigs['pos'] == self.trans.size + 2:
+                self.call = self._flux_1d_var21
+            else:
+                assert False, 'ReactionFlux: Should not get here!'
         else:
             assert False, 'ReactionFlux: Should not get here!'
 
