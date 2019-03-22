@@ -17,6 +17,8 @@ from model.xml_utils import isParameter, isDomainBoundary
 """
 class Interval(SimulationObject):
     def __init__(self, a = 0, b = 1, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
         # set the basic parameters
         self.name               = kwargs.pop('name', 'x')
         self.endPoints          = np.array([a, b])
@@ -57,7 +59,6 @@ class Interval(SimulationObject):
     def xf(self):
         return self.endPoints[1]
 
-
     """ Creation """
     def _create_from_args(self, *args, **kwargs):
         pass
@@ -83,7 +84,13 @@ class Interval(SimulationObject):
 
         # set the objects parameters!
         for p in parameters:
-            setattr(self, p.name, p.value)
+            # HACK FIXME
+            if p.name == 'x0':
+                self.endPoints[0] = p.value
+            elif p.name == 'xf':
+                self.endPoints[1] = p.value
+            else:
+                setattr(self, p.name, p.value)
 
 
     """ Factory """
