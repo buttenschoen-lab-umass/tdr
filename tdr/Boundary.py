@@ -6,9 +6,9 @@
 from __future__ import print_function
 import numpy as np
 
-from model.SimulationObject import SimulationObject
-from model.SimulationObjectFactory import createSimObject, createSimObjectByName
-from model.xml_utils import isParameter, isBoundary
+from SimulationObject.SimulationObject import SimulationObject
+from SimulationObject.SimulationObjectFactory import createSimObject, createSimObjectByName
+from utils.xml import isParameter, isBoundary
 
 
 """

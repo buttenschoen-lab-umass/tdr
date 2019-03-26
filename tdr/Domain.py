@@ -7,9 +7,9 @@ import numpy as np
 from tdr.utils import asarray, round_to_nearest_fraction
 from tdr.Boundary import DomainBoundary
 
-from model.SimulationObject import SimulationObject
-from model.SimulationObjectFactory import createSimObject
-from model.xml_utils import isParameter, isDomainBoundary
+from SimulationObject.SimulationObject import SimulationObject
+from SimulationObject.SimulationObjectFactory import createSimObject
+from utils.xml import isParameter, isDomainBoundary
 
 
 """
