@@ -23,7 +23,8 @@ class SimulationObjectXml(SimulationObject):
 
     __par_registers__ = ['registerParameterScope',
                          'registerParameterScopeAttr',
-                         'registerSimulationObjectScope']
+                         'registerSimulationObjectScope',
+                         'registerSimulationObject']
 
 
     def __init__(self, *args, **kwargs):
@@ -76,8 +77,23 @@ class SimulationObjectXml(SimulationObject):
                         registrar(dest, sobj)
 
                     break
+
+            # If we got to the end of the above loop execute this
             else:
-                assert False, 'Encountered unknown xml type %s' % child.tag
+                # check if __xml_args__ has default key set if so add to simulation objects
+                if 'default' in self.__xml_args__:
+                    self.logger.debug('[%s] found %s, %s.' % (self.name, child.tag, cls_name))
+                    #registrars = getattr(self, self.__xml_args__['default'])
+                    for cls_registrar in self.__xml_args__['default']:
+                        registrar = getattr(self, cls_registrar)
+                        if cls_registrar in self.__par_registers__:
+                            # We have to register a parameter no destination required
+                            self.logger.debug('[%s] parameter: %s.' % (self.name, sobj.name))
+                            registrar(sobj)
+                        else:
+                            assert False, 'Handling of \"%s\" does not exist!' % cls_registrar
+                else:
+                    assert False, 'Encountered unknown xml type %s' % child.tag
 
 
     """ register a Parameter in local scope """
