@@ -2,12 +2,11 @@
 # -*- coding: utf-8 -*-
 # Author: Andreas Buttenschoen
 #
-
 from __future__ import print_function
 import numpy as np
 
 from SimulationObject.SimulationObject import SimulationObject
-from SimulationObject.SimulationObjectFactory import createSimObject, createSimObjectByName
+from SimulationObject.SimulationObjectFactory import createSimObject
 from utils.xml import isParameter, isBoundary
 
 

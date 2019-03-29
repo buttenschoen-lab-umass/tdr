@@ -5,7 +5,7 @@ from __future__ import print_function, division
 
 import numpy as np
 
-from tdr.utils import LimiterFactory
+from tdr.helpers import LimiterFactory
 from tdr.Flux import Flux
 
 

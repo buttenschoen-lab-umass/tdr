@@ -5,7 +5,7 @@ from __future__ import print_function, division
 
 import numpy as np
 
-from tdr.utils import VanLeer
+from tdr.helpers import VanLeer
 from tdr.Flux import Flux
 
 

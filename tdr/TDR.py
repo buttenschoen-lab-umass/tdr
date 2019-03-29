@@ -17,7 +17,7 @@ from tdr.FluxAdvection import AdvectionFlux
 from tdr.FluxReaction import ReactionFlux
 from tdr.FluxDilution import DilutionFlux
 
-from tdr.utils import zeros, asarray, offdiagonal
+from tdr.helpers import zeros, asarray, offdiagonal
 
 #
 # TODO: MySQL integration for data storage

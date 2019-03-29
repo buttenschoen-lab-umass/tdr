@@ -5,7 +5,7 @@ from __future__ import print_function
 
 import numpy as np
 from tdr.Patch import Patch
-from tdr.utils import expand_dims
+from tdr.helpers import expand_dims
 
 
 class Grid(object):

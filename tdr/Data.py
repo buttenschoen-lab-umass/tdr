@@ -10,7 +10,7 @@ from __future__ import print_function, division
 
 import numpy as np
 
-from tdr.utils import asarray
+from tdr.helpers import asarray
 
 
 class Data(object):

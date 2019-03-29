@@ -4,7 +4,7 @@
 from __future__ import print_function, division
 
 import numpy as np
-from tdr.utils import asarray, round_to_nearest_fraction
+from tdr.helpers import asarray, round_to_nearest_fraction
 from tdr.Boundary import DomainBoundary
 
 from SimulationObject.SimulationObject import SimulationObject

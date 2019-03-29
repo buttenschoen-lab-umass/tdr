@@ -5,7 +5,7 @@ from __future__ import print_function, division
 
 import numpy as np
 
-from tdr.utils import cartesian
+from tdr.helpers import cartesian
 from tdr.Data import Data
 from tdr.NonLocalGradient import NonLocalGradient
 from tdr.Boundary import DomainBoundary
