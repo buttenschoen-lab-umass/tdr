@@ -16,6 +16,9 @@ from utils.xml import isParameter, isDomainBoundary
     1-D only for the moment.
 """
 class Interval(SimulationObject):
+
+    __short_name__ = 'int'
+
     def __init__(self, a = 0, b = 1, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
