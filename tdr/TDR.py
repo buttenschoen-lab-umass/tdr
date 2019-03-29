@@ -19,10 +19,6 @@ from tdr.FluxDilution import DilutionFlux
 
 from tdr.helpers import zeros, asarray, offdiagonal
 
-#
-# TODO: MySQL integration for data storage
-#       XML    definition of fluxes etc
-#
 """
     This class implements a Taxis-Diffusion-Reaction Solver for parabolic
     partial differential equations.
