@@ -61,6 +61,8 @@ class ReactionFlux(Flux):
         # on each other.
         Hr = apply_along_column_var(self.trans, patch.data.y[:, patch.bW:-patch.bW], t, patch.xc)
 
+        #print('\tHr:', np.min(Hr), ' ', np.max(Hr))
+
         # cut of the boundary width
         patch.data.ydot += Hr
 
@@ -74,18 +76,5 @@ class ReactionFlux(Flux):
 
         # cut of the boundary width
         patch.data.ydot += Hr
-
-
-if __name__ == '__main__':
-    from testing import create_test
-    import numpy as np
-    ctx = create_test()
-
-    trans = np.eye(2)
-    flux = ReactionFlux(ctx, trans)
-
-    for i in range(0, 2):
-        flux(i, 0)
-
 
 
