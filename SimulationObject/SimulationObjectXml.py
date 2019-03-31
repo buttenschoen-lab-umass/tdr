@@ -39,13 +39,22 @@ class SimulationObjectXml(SimulationObject):
 
 
     """ Process xml """
+    def _process_xml_attrib(self, attribs):
+        for name, value in attribs.items():
+            if name.lower() == 'requires':
+                self.requirements.append(value)
+            else:
+                setattr(self, name, value)
+
+        self.requirements = set(self.requirements)
+
+
     def _create_from_xml(self, xml, *args, **kwargs):
         # set name
         setattr(self, 'name', xml.tag)
 
         # first check if the main node has attributes
-        for name, value in xml.attrib.items():
-            setattr(self, name, value)
+        self._process_xml_attrib(xml.attrib)
 
         # create scope
         self.scope = Scope(self.name, parent=kwargs.pop('parentScope', None))
