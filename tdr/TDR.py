@@ -194,7 +194,8 @@ class TDR(object):
         #elif self.hasDiffusion():
         #    return np.max(1, self.bw)
 
-        return self.bw
+        # TEMP improve handling in tdr.Data!
+        return np.max(2, self.bw)
 
 
     """ TODO These functions have to be implemented via the solout callback!  """
