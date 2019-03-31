@@ -44,7 +44,13 @@ class SimulationObjectXml(SimulationObject):
             if name.lower() == 'requires':
                 self.requirements.append(value)
             else:
-                setattr(self, name, value)
+                attr = name.lower()
+
+                if hasattr(self, attr) and getattr(self, attr) is not None:
+                    self.logger.info('%s\'s attribute %s is set to non trivial value: %s.' \
+                                     % (self.name, attr, getattr(self, attr)))
+
+                setattr(self, attr, value)
 
         self.requirements = set(self.requirements)
 
