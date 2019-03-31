@@ -13,7 +13,8 @@ from utils.xml import isParameter, isDomainBoundary
 
 
 """
-    1-D only for the moment.
+    An object representing a 1D interval. In mathematical terms this represents
+    a closed interval [x0, xf]
 """
 class Interval(SimulationObject):
 
@@ -33,9 +34,9 @@ class Interval(SimulationObject):
         xml = kwargs.pop('xml', None)
 
         # Length parameters
-        self.n                  = kwargs.pop('n', 6)
-        self.cellsPerUnitLength = kwargs.pop('cellsPerUnitLength', 2**self.n)
-        self.M                  = self.cellsPerUnitLength
+        self.n                  = np.int(kwargs.pop('n', 6))
+        self.cellsPerUnitLength = np.int(kwargs.pop('cellsPerUnitLength', 2**self.n))
+        self.M                  = np.int(self.cellsPerUnitLength)
         self.h                  = 1. / self.cellsPerUnitLength
 
         # for plotting
@@ -61,6 +62,7 @@ class Interval(SimulationObject):
     @property
     def xf(self):
         return self.endPoints[1]
+
 
     """ Creation """
     def _create_from_args(self, *args, **kwargs):
@@ -110,7 +112,7 @@ class Interval(SimulationObject):
     def _reset(self):
         self.L                  = np.abs(self.xf - self.x0)
         self.h                  = 1. / self.cellsPerUnitLength
-        self.N                  = self.L * self.cellsPerUnitLength
+        self.N                  = np.int(self.L * self.cellsPerUnitLength)
         self.dX                 = asarray(self.h)
         self.x                  = self.xs()
 
@@ -129,7 +131,7 @@ class Interval(SimulationObject):
 
 
     def xs(self):
-        return np.linspace(self.x0, self.xf - self.h, self.N)
+        return np.linspace(self.x0, self.xf, self.N, endpoint=True)
 
 
     def box(self):
