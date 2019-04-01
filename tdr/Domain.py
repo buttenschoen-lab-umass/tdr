@@ -21,7 +21,7 @@ class Interval(SimulationObject):
     __short_name__ = 'int'
 
     def __init__(self, a = 0, b = 1, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super(Interval, self).__init__(*args, **kwargs)
 
         # set the basic parameters
         self.name               = kwargs.pop('name', 'x')
@@ -37,7 +37,11 @@ class Interval(SimulationObject):
         self.n                  = np.int(kwargs.pop('n', 6))
         self.cellsPerUnitLength = np.int(kwargs.pop('cellsPerUnitLength', 2**self.n))
         self.M                  = np.int(self.cellsPerUnitLength)
+        self.N                  = kwargs.pop('N', None)
         self.h                  = 1. / self.cellsPerUnitLength
+
+        # use fixed N
+        self.useFixedN          = self.N is not None
 
         # for plotting
         self.y0                 = kwargs.pop('y0', 0.)
@@ -111,8 +115,14 @@ class Interval(SimulationObject):
     """ Internal methods """
     def _reset(self):
         self.L                  = np.abs(self.xf - self.x0)
+
+        if self.useFixedN:
+            self.cellsPerUnitLength = self.N / self.L
+            assert self.N == np.int(self.L * self.cellsPerUnitLength), ''
+        else:
+            self.N                  = np.int(self.L * self.cellsPerUnitLength)
+
         self.h                  = 1. / self.cellsPerUnitLength
-        self.N                  = np.int(self.L * self.cellsPerUnitLength)
         self.dX                 = asarray(self.h)
         self.x                  = self.xs()
 

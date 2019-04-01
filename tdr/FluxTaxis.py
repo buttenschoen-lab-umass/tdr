@@ -316,6 +316,10 @@ class TaxisFlux(Flux):
         return
 
 
+    """ EXPERIMENTAL: update adh-trans for bifurcation continuations """
+    def update_adhtrans(self, trans):
+        self.transAdh = trans
+
 
 
 if __name__ == '__main__':

@@ -38,7 +38,14 @@ class Flux(object):
         return 'Flux'
 
 
-    """ update constants """
+    """ update time-dependence in transition matrix values """
     def update(self, t):
         pass
+
+
+    """ EXPERIMENTAL: update trans for bifurcation continuations """
+    def update_trans(self, trans):
+        self.trans = trans
+
+
 

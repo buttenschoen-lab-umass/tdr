@@ -108,6 +108,27 @@ from tdr.helpers import zeros, asarray, offdiagonal
 
 """
 class TDR(object):
+
+    # keywords used for transition matrices
+    # Transition is used for both taxis and diffusion
+    __transition__ = 'transitionMatrix'
+
+    # used for advection terms -> mainly hyperbolic systems
+    __advection__  = 'transport'
+
+    # Used for coefficients for non-local taxis terms
+    __adhesion__   = 'AdhesionTransitionMatrix'
+
+    # used for reaction terms
+    __reaction__   = 'reactionTerms'
+
+    # TODO get rid of this!
+    __flux_names__ = {__transition__ : ['diffusion', 'taxis'],
+                      __advection__  : ['advection'],
+                      __reaction__   : ['reaction'],
+                      __adhesion__   : ['taxis']}
+
+
     def __init__(self, *args, **kwargs):
         # terms
         self.version        = 'TDR-python-0.1'
@@ -228,6 +249,38 @@ class TDR(object):
         return self.ydot
 
 
+    """ This is the entry point for numerical bifurcation analysis """
+    def compute(self, y, *args, **kwargs):
+        """ compute
+            - y: ndarray
+            - *args: could contain time information -> ignored currently.
+            - **kwargs expects dictionary with transition matrices
+        """
+        #print('p:',kwargs)
+        #print('fluxTerms:', self.fluxTerms)
+        # update flux parameters
+        for tname, tvalue in kwargs.items():
+            # lookup corresponding flux(s)
+            flux_names = self.__flux_names__[tname]
+
+            # have to deal with adhesion differently
+            if tname == self.__adhesion__:
+                flux = self.fluxTerms[flux_names[0]]
+                flux.update_adhtrans(tvalue)
+            else:
+                for flux_name in flux_names:
+                    flux = self.fluxTerms[flux_name]
+                    flux.update_trans(tvalue)
+
+        # update everything
+        self.update(0, y)
+
+        # dev check!
+        assert self.ydot is not None, 'In TDR update ydot is None!'
+
+        return self.ydot
+
+
     """ get number of patches """
     def _get_nops(self, requested_nop):
         if self.dimensions == 1:
@@ -258,10 +311,10 @@ class TDR(object):
         print('TDR: registered domain %s.' % self.dom)
 
         # load transition matrices
-        trans      = asarray(kwargs.pop('transitionMatrix',           zeros(self.size)))
-        advection  = asarray(kwargs.pop('transport',                  zeros(self.size)))
-        Adhtrans   = asarray(kwargs.pop('AdhesionTransitionMatrix',   zeros(self.size)))
-        reaction   = asarray(kwargs.pop('reactionTerms',              np.full(self.size, None)))
+        trans      = asarray(kwargs.pop(self.__transition__, zeros(self.size)))
+        advection  = asarray(kwargs.pop(self.__advection__,  zeros(self.size)))
+        Adhtrans   = asarray(kwargs.pop(self.__adhesion__,   zeros(self.size)))
+        reaction   = asarray(kwargs.pop(self.__reaction__,   np.full(self.size, None)))
 
         # These should be shared among all players on the domain!
         deformation = asarray(kwargs.pop('r',                       None))
