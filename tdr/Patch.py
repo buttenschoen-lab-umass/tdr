@@ -185,12 +185,14 @@ class Patch(object):
 
     def _setup_nonlocal(self, *args, **kwargs):
         assert self.dX.size == 1, 'not implemented'
-        mode = self._nonlocal_mode(*args, **kwargs)
+        mode     = self._nonlocal_mode(*args, **kwargs)
+        int_mode = kwargs.pop('int_mode', 'uniform')
         beta0 = kwargs.pop('beta0', 0.)
         betaL = kwargs.pop('betaL', 0.)
 
         self.nonLocalGradient = NonLocalGradient(self.dX[0], self.shape[0],
                                                  self.N[0], mode=mode,
+                                                 kernel = int_mode,
                                                  beta0=beta0, betaL=betaL)
 
 

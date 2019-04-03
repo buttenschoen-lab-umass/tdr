@@ -42,6 +42,7 @@ from scipy.fftpack import fft, ifft
 
 """
 class NonLocalGradient:
+
     def __init__(self, h, L, N2, R = 1., *args, **kwargs):
         self.h      = h
         self.L      = L
@@ -71,6 +72,17 @@ class NonLocalGradient:
 
         # the non-local operator mode
         self.mode    = kwargs.pop('mode', 'periodic')
+
+        # Known integration kernels
+        self.__integration_kernels__ = {'uniform' : self._uniform_integration_kernel,
+                                        'exponential' : self._exponential_integration_kernel,
+                                        'peak' : self._peak_integration_kernel}
+        # integration kernel
+        int_mode = kwargs.pop('kernel', 'uniform')
+        self.xi  = kwargs.pop('xi', 0.5)
+        assert int_mode in self.__integration_kernels__.keys(), 'Unknown integration kernel %s.' % int_mode
+        print('NonLocalGradient kernel %s chosen.' % int_mode)
+        self.get_integration_kernels = self.__integration_kernels__[int_mode]
 
         """ Compute integration weights """
         self._init()
@@ -197,10 +209,33 @@ class NonLocalGradient:
 
     """ The uniform integration kernel """
     def _integration_kernel(self):
-        OmegaM = lambda r : (-1. / (2. * self.R)) * (np.abs(r) <= self.R)
-        OmegaP = lambda r : ( 1. / (2. * self.R)) * (np.abs(r) <= self.R)
+        OmegaM, OmegaP = self.get_integration_kernels()
         int_kernel = lambda r : np.piecewise(r, [r < 0., r > 0.], [lambda r : OmegaM(r), lambda r : OmegaP(r)])
         return int_kernel
+
+
+    """ Implemented integration kernels """
+    def _uniform_integration_kernel(self):
+        """ uniform integration kernel """
+        OmegaM = lambda r : (-1. / (2. * self.R)) * (np.abs(r) <= self.R)
+        OmegaP = lambda r : ( 1. / (2. * self.R)) * (np.abs(r) <= self.R)
+        return OmegaM, OmegaP
+
+
+    def _exponential_integration_kernel(self):
+        """ exponential integration kernel """
+        omega0 = 1./(2. * self.xi * (1. - np.exp(-self.R/self.xi)))
+        OmegaM = lambda r : -omega0 * (np.abs(r) <= self.R) * np.exp(-np.abs(r)/self.xi)
+        OmegaP = lambda r :  omega0 * (np.abs(r) <= self.R) * np.exp(-np.abs(r)/self.xi)
+        return OmegaM, OmegaP
+
+
+    def _peak_integration_kernel(self):
+        """ exponential integration kernel """
+        omega0 = 1./(2. * self.xi * (1. - np.exp(-self.R**2/(2. * self.xi**2))))
+        OmegaM = lambda r : -omega0 * (r / self.xi) * (np.abs(r) <= self.R) * np.exp(-0.5 * (np.abs(r)/self.xi)**2)
+        OmegaP = lambda r :  omega0 * (r / self.xi) * (np.abs(r) <= self.R) * np.exp(-0.5 * (np.abs(r)/self.xi)**2)
+        return OmegaM, OmegaP
 
 
     """ Periodic implementation """
@@ -210,8 +245,7 @@ class NonLocalGradient:
             composite using the formula presented in section 3.1.3 of Gerisch
             2010
         """
-        OmegaM = lambda r : (-1. / (2. * self.R)) * (np.abs(r) <= self.R)
-        OmegaP = lambda r : ( 1. / (2. * self.R)) * (np.abs(r) <= self.R)
+        OmegaM, OmegaP = self.get_integration_kernels()
 
         self.weights = np.zeros(self.lm+self.lp+1)
         xi = (self.lm + 4.5) * self.h
