@@ -81,7 +81,7 @@ class NonLocalGradient:
         int_mode = kwargs.pop('kernel', 'uniform')
         self.xi  = kwargs.pop('xi', 0.5)
         assert int_mode in self.__integration_kernels__.keys(), 'Unknown integration kernel %s.' % int_mode
-        print('NonLocalGradient kernel %s chosen.' % int_mode)
+        print('NonLocalGradient kernel %s chosen with xi = %.2f.' % (int_mode, self.xi))
         self.get_integration_kernels = self.__integration_kernels__[int_mode]
 
         """ Compute integration weights """

@@ -193,6 +193,7 @@ class Patch(object):
         self.nonLocalGradient = NonLocalGradient(self.dX[0], self.shape[0],
                                                  self.N[0], mode=mode,
                                                  kernel = int_mode,
-                                                 beta0=beta0, betaL=betaL)
+                                                 beta0=beta0, betaL=betaL,
+                                                 *args, **kwargs)
 
 
