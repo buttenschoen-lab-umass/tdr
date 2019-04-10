@@ -233,8 +233,8 @@ class NonLocalGradient:
     def _peak_integration_kernel(self):
         """ exponential integration kernel """
         omega0 = 1./(2. * self.xi * (1. - np.exp(-self.R**2/(2. * self.xi**2))))
-        OmegaM = lambda r : -omega0 * (r / self.xi) * (np.abs(r) <= self.R) * np.exp(-0.5 * (np.abs(r)/self.xi)**2)
-        OmegaP = lambda r :  omega0 * (r / self.xi) * (np.abs(r) <= self.R) * np.exp(-0.5 * (np.abs(r)/self.xi)**2)
+        OmegaM = lambda r : -omega0 * (np.abs(r) / self.xi) * (np.abs(r) <= self.R) * np.exp(-0.5 * (np.abs(r)/self.xi)**2)
+        OmegaP = lambda r :  omega0 * (np.abs(r) / self.xi) * (np.abs(r) <= self.R) * np.exp(-0.5 * (np.abs(r)/self.xi)**2)
         return OmegaM, OmegaP
 
 
