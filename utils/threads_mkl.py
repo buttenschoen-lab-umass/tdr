@@ -5,7 +5,6 @@ from ctypes.util import find_library
 
 #os.environ['MKL_DYNAMIC']='false'
 #os.environ['MKL_NUM_THREADS']='8'
-os.environ['MKL_VERBOSE']='1'
 
 # Prioritize hand-compiled OpenBLAS library over version in /usr/lib/
 # from Ubuntu repos
@@ -65,6 +64,7 @@ def num_threads(n):
 
 if __name__ == '__main__':
     import numpy as np
+    os.environ['MKL_VERBOSE']='1'
 
     print('Max threads %d.' % get_num_threads())
 
