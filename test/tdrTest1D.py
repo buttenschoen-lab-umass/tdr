@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-from __future__ import print_function, division
+from __future__ import print_function, division, absolute_import
 
 import unittest
 import os
@@ -21,6 +21,7 @@ from python.utils import norm1, norm2
 
 # Simple ffmpeg movie support
 from im2movie import makeMovie
+
 
 """ For the 1d and 2d taxis tests """
 def concentrationField(t, r):
