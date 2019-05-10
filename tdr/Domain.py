@@ -238,6 +238,7 @@ class Square(object):
     def _reset(self):
         self.L          = np.array([self.xf - self.x0, self.yf - self.y0])
         self.N          = np.asarray([self.xf - self.x0, self.yf - self.y0]) * self.cellsPerUnitLength
+        self.N          = self.N.astype(np.int)
         self.dX         = self.h * np.ones(2)
 
 
