@@ -304,7 +304,7 @@ class TDR(object):
         self.t = kwargs.pop('t0', 0.)
 
         # set dimension
-        self.dimensions = dom.dimensions()
+        self.dimensions = dom.dimensions
 
         # save domain
         self.dom = dom
@@ -434,16 +434,22 @@ class TDR(object):
 
     """ output """
     def __str__(self):
-        # TODO improve this
-        rstr = 'TDR has:\n'
+        rstr = 'TDR(PDEs = %d; dim = %d; fluxes = %d; bw = %d) has:\n' % \
+                (self.size, self.dimensions, len(self.fluxes), self.bw)
+
         if self.haveDiffusionTerms: rstr += '\tdiffusion term.'
         if self.haveReactionTerms: rstr += '\treaction term.'
         if self.haveNonLocalTerms: rstr += '\tnon-local term.'
         if self.haveDilutionTerms: rstr += '\tdilution term.'
         if self.haveAdvectionTerms: rstr += '\tadvection term.'
         if self.haveTaxisTerms: rstr += '\ttaxis term.'
+
         return rstr
 
+
+    def __repr__(self):
+        return 'TDR(PDEs = %d; dim = %d; fluxes = %d; bw = %d.' % \
+                (self.size, self.dimensions, len(self.fluxes), self.bw)
 
 if __name__ == '__main__':
     print('Testing TDR')
