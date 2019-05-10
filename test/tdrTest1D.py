@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-from __future__ import print_function, division, absolute_import
+from __future__ import absolute_import, print_function, division
 
 import unittest
 import os
@@ -89,7 +89,7 @@ def plotInit(x, c0, n0, fname=None):
 
 
 def compute_error(times, x, dfs, ansoln, norm = lambda x : np.abs(x),
-                  tol=1.e-16, mask=None):
+                  tol=1.e-16, mask=None, tround=2):
     # We assume that dfs and ansoln have the same keys!!
     error_dfs = {}
 
@@ -99,8 +99,11 @@ def compute_error(times, x, dfs, ansoln, norm = lambda x : np.abs(x),
 
     for key in dfs.keys():
         error_dfs[key] = pd.DataFrame()
+        df = dfs[key]
+        df = df.set_index(np.round(df.index, decimals=tround))
+        df = df.transpose()
         for time in times:
-            numerical_soln = dfs[key][time].values[mask]
+            numerical_soln = df[time].values[mask]
             analyical_soln = np.nan_to_num(ansoln[key](time, x[mask]), copy=True)
             error_dfs[key][time] = np.maximum(tol, norm(numerical_soln - analyical_soln))
 
@@ -117,8 +120,14 @@ def plot_soln(time, x, dfs, fname=None):
     plt.clf()
     plt.title('Time %.4g' % time)
     plt.grid()
-    ymax = 1.2 * np.max(dfs[1][time].values)
-    plt.plot(x, dfs[1][time].values, label='Numerical')
+
+    df0 = dfs[1]
+    df0 = df0.set_index(np.round(df0.index, decimals=4))
+    df0 = df0.transpose()
+    val = df0[time].values
+
+    ymax = 1.2 * np.max(val)
+    plt.plot(x, val, label='Numerical')
     plt.plot(x, edens, label='Analytical', ls='--')
     plt.ylabel('Density')
     plt.xlabel('x')
@@ -138,8 +147,12 @@ def plot_soln_diff(time, x, dfs, fname=None):
     plt.clf()
     plt.title('Time %.4g' % time)
     plt.grid()
-    ymax = 1.2 * np.max(dfs[0][time].values)
-    plt.plot(x, dfs[0][time].values, label='Numerical')
+    df0 = dfs[0]
+    df0 = df0.set_index(np.round(df0.index, decimals=2))
+    df0 = df0.transpose()
+    val = df0[time].values
+    ymax = 1.2 * np.max(val)
+    plt.plot(x, val, label='Numerical')
     plt.plot(x, edens, label='Analytical', ls='--')
     plt.ylabel('Density')
     plt.xlabel('x')
@@ -153,7 +166,7 @@ def plot_soln_diff(time, x, dfs, fname=None):
         plt.savefig(fname)
 
 
-class Taxis1dUnitTest(unittest.TestCase):
+class tdrTest1D(unittest.TestCase):
 
     def setUp(self):
         # solver tolerance
@@ -174,8 +187,10 @@ class Taxis1dUnitTest(unittest.TestCase):
         self.expected_errors = {}
 
 
+    """ Functions that setup constants for taxis tests """
     def _taxis_setup(self):
         self.L = 0.5
+        self.time_round = 4
         self.interval = Interval(-self.L, self.L, n = 12)
         self.dt       = 0.0001
 
@@ -199,8 +214,10 @@ class Taxis1dUnitTest(unittest.TestCase):
                        1 : lambda t, x : n(t, x)}
 
 
+    """ Functions that setup constants for diffusion tests """
     def _diffusion_setup(self):
         self.L = 2.
+        self.time_round = 2
         self.interval = Interval(0, self.L, n = 12)
 
         # number of equations
@@ -219,6 +236,7 @@ class Taxis1dUnitTest(unittest.TestCase):
         self.ansoln = {0 : lambda t, x : diffusion_1d_analyticSolution(t, x)}
 
 
+    """ Create initial condition for taxis tests """
     def get_ic_taxis(self):
         x = self.interval.xs()
         _c0 = concentrationField(0, x)
@@ -230,6 +248,7 @@ class Taxis1dUnitTest(unittest.TestCase):
         return np.row_stack((_c0, _n0))
 
 
+    """ Create initial condition for diffusion tests """
     def get_ic_diff(self, k = 1):
         x = self.interval.xs()
         return np.cos(k * np.pi * x / self.L) + 2.
@@ -240,16 +259,18 @@ class Taxis1dUnitTest(unittest.TestCase):
         y0 = ic_gen()
 
         self.solver = MOL(TDR, y0, nop = self.nop, domain = self.interval,
-                          livePlotting=False, noPDEs = self.size,
-                          transitionMatrix = self.trans, time = time, vtol=self.vtol)
+                          livePlotting=False, transitionMatrix = self.trans,
+                          time = time, vtol=self.vtol)
 
         self.solver.run()
 
 
+    """ Data handling + plotting output """
     def mask_dfs(self, mask):
         dfs = self.solver.dfs
         ndfs = {}
         for key, df in dfs.items():
+            df = df.transpose()
             cols = df.columns.values
             ndfs[key] = pd.DataFrame()
             ndf = ndfs[key]
@@ -261,14 +282,15 @@ class Taxis1dUnitTest(unittest.TestCase):
     def check_outdir(self):
         cwd = os.getcwd()
         self.outdir = os.path.join(cwd, 'results', 'tests', self.name)
+        print('Writing test results to %s.' % self.outdir)
         if not os.path.isdir(self.outdir):
             os.makedirs(self.outdir)
 
 
     def do_final_plots(self, plot_fn):
         times = self.get_times()
-        x = self.interval.xs()
-        dfs = self.solver.dfs
+        x     = self.interval.xs()
+        dfs   = self.solver.dfs
 
         # to delete them after movie creation
         files = []
@@ -332,13 +354,15 @@ class Taxis1dUnitTest(unittest.TestCase):
     def get_times(self):
         dfs = self.solver.dfs
         # assume that all the times are the same
-        return dfs[0].columns.values
+        return np.round(dfs[0].transpose().columns.values,
+                        decimals=self.time_round)
 
 
     def get_error(self, mask=None):
         x = self.interval.xs()
         times = self.get_times()
-        error_dfs = compute_error(times, x, self.solver.dfs, self.ansoln,mask=mask)
+        error_dfs = compute_error(times, x, self.solver.dfs, self.ansoln,
+                                  mask=mask, tround=self.time_round)
         return error_dfs
 
 
@@ -351,7 +375,7 @@ class Taxis1dUnitTest(unittest.TestCase):
 
 
     def get_position(self):
-        return np.array([0, self.L])
+        return np.array([lambda x : 0, lambda x : self.L])
 
 
     def test_taxis1d_short_time(self):
@@ -449,7 +473,7 @@ class Taxis1dUnitTest(unittest.TestCase):
         self.check_outdir()
 
         # time
-        time = Time(t0 = 0., tf = 2., dt = 0.01)
+        time = Time(t0 = 0., tf = 2.0, dt = 0.01)
 
         # execute the solver
         self.exec_solver(time, self.get_ic_diff)
