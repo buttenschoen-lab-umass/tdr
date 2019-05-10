@@ -43,6 +43,15 @@ class Grid(object):
         return self.patches
 
 
+    def __repr__(self):
+        return 'Grid(n = %d; dim = %d; patches = %d; bw = %d)' % \
+                (self.n, self.dim, len(self.patches), self.boundaryWidth)
+
+
+    def __str__(self):
+        return self.__repr__()
+
+
     """ update grid information """
     def update(self, t, y):
         # TODO need to unwrap y

@@ -79,6 +79,11 @@ class Patch(object):
         self._setup(*args, **kwargs)
 
 
+    def __str__(self):
+        return 'Patch(d = %d; x0 = %s; xf = %s; dX = %s; n = %d; N = %s).' % \
+                (self.dim, self.x0, self.xf, self.dX, self.n, self.N)
+
+
     """ Public methods """
     def update(self, t, y):
         # must run these before
