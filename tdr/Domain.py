@@ -47,7 +47,7 @@ class Interval(SimulationObject):
         self.y0                 = kwargs.pop('y0', 0.)
         self.yf                 = kwargs.pop('yf', 10.)
 
-        self.bd                 = kwargs.pop('bd', DomainBoundary())
+        self.bd                 = kwargs.pop('bd', DomainBoundary(dim=self.dimensions))
 
         if xml is not None:
             print('Creating Interval from xml!')
@@ -136,6 +136,7 @@ class Interval(SimulationObject):
         return np.asarray(self.x0)
 
 
+    @property
     def dimensions(self):
         return 1
 
@@ -208,7 +209,8 @@ class Interval(SimulationObject):
 
 
 """
-    2-D square.
+    An object representing a 2D square. In mathematical terms this represents
+    a closed interval [x0, xf] x [y0, yf]
 """
 class Square(object):
     def __init__(self, a, b, c, d, *args, **kwargs):
@@ -226,7 +228,7 @@ class Square(object):
         self.cellsPerUnitLength = kwargs.pop('cellsPerUnitLength', 2**self.n)
         self.h                  = 1. / self.cellsPerUnitLength
 
-        self.bd                 = kwargs.pop('bd', DomainBoundary())
+        self.bd                 = kwargs.pop('bd', DomainBoundary(dim=self.dimensions))
 
         # call reset
         self._reset()
@@ -244,16 +246,17 @@ class Square(object):
         return np.asarray([self.x0, self.y0])
 
 
+    @property
     def dimensions(self):
         return 2
 
 
     def xs(self):
-        return np.linspace(self.x0, self.xf - self.h, self.N[0])
+        return np.linspace(self.x0, self.xf, self.N[0], endpoint=True)
 
 
     def ys(self):
-        return np.linspace(self.y0, self.yf - self.h, self.N[1])
+        return np.linspace(self.y0, self.yf, self.N[1], endpoint=True)
 
 
     def box(self):
@@ -269,7 +272,9 @@ class Square(object):
 
 
     def __repr__(self):
-        return 'Square(%.2f, %.2f, %.2f, %.2f, %d)' % (self.x0, self.xf, self.y0, self.yf, self.N)
+        return 'Square(%.2f, %.2f, %.2f, %.2f, %s, %s, %s, %s, %s)' % \
+                (self.x0, self.xf, self.y0, self.yf, self.N, self.bd.left.name,
+                self.bd.right.name, self.bd.bottom.name, self.bd.top.name)
 
 
     def __str__(self):
