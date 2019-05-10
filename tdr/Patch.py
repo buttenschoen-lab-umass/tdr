@@ -39,6 +39,15 @@ class Patch(object):
                         These are forwarded to Data
 
 
+        Data Layout
+        -----------
+        1) First the row of grid cells with the smallest x-values, then the row
+           just above.
+
+        2) Within each row of grid values start with the ones with the smallest
+           y-values.
+
+
         Attributes
         ----------
 
