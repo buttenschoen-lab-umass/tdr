@@ -168,10 +168,9 @@ class Dirichlet(Boundary):
 
 
 """
-    This class implements easy setup of boundary conditions
+    The class DomainBoundary is a helper that easily equips a domain with
+    boundary conditions.
 """
-
-""" 1D only at the moment """
 class DomainBoundary(SimulationObject):
     def __init__(self, *args, **kwargs):
         # spatial dimension
