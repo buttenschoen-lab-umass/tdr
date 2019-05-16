@@ -86,7 +86,7 @@ class Boundary(SimulationObject):
 
 
 class Periodic(Boundary):
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         super(Periodic, self).__init__(name = "Periodic")
 
 
