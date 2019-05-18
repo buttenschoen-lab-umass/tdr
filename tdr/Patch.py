@@ -54,21 +54,13 @@ class Patch(object):
         TODO
 
     """
-    def __init__(self, n, patchId, x0, dX, N, *args, **kwargs):
-        #print('Creating patch: %d, origin: %s, dX: %s, N: %s.' % (patchId, x0, dX, N))
-        self.x0     = x0
-        self.N      = N
-        self.n      = n
-        self.dim    = N.size
-        self.dX     = dX
+    def __init__(self, *args, **kwargs):
+        self.x0     = kwargs.pop('x0')
+        self.N      = kwargs.get('N')
+        self.dim    = self.N.size
         self.ngb    = kwargs.pop('ngb', DomainBoundary(self.dim))
-        self.shape  = self.N * self.dX
-        self.xf     = self.x0 + self.shape
 
-        self.patchId = patchId
-        # TODO set DEPRECATE ONE!
-        self.boundaryWidth      = kwargs.pop('boundaryWidth', 0)
-        self.bW                 = self.boundaryWidth
+        # reference to the non-local gradient
         self.nonLocalGradient   = None
 
         # data for the patch
@@ -77,20 +69,30 @@ class Patch(object):
         # array holding the cell centers
         self.xc = None
 
+        # setup
+        self._setup(*args, **kwargs)
+
+        # uses information only saved in data
+        self.shape  = self.N * self.dX
+        self.xf     = self.x0 + self.shape
+
         # Print status
         print('Creating patch(%d) with lower corner %s and upper corner %s.' %
               (self.patchId, self.x0, self.xf))
 
-        # build cell centers
-        self._setup_cell_centers()
-
-        # setup
-        self._setup(*args, **kwargs)
-
 
     def __str__(self):
-        return 'Patch(d = %d; x0 = %s; xf = %s; dX = %s; n = %d; N = %s).' % \
-                (self.dim, self.x0, self.xf, self.dX, self.n, self.N)
+        return 'Patch(Id = %d, d = %d; x0 = %s; xf = %s; dX = %s; n = %d; N = %s; se=[%d, %d]).' % \
+                (self.patchId, self.dim, self.x0, self.xf, self.dX, self.n, self.N, self.ps, self.pe)
+
+
+    def __repr__(self):
+        return self.__str__()
+
+
+    """ Redirect attribute gets to the data sub-object """
+    def __getattr__(self, name):
+        return getattr(self.data, name)
 
 
     """ Public methods """
@@ -113,23 +115,15 @@ class Patch(object):
 
 
     def step_size(self):
-        # TODO: figure out when we are deforming the domain whether we need to
-        # adjust this here?
         return self.dX
 
 
-    def size(self):
-        return np.prod(self.N)
-
-
+    """ Computes the centers of the small volumes in the domain """
     def cellCenters(self):
-        return cartesian(self.xc)
+        return self.x0 + cartesian(self.xc)
 
 
-    def get_ydot(self):
-        return self.data.ydot
-
-
+    """ The integer shape of the patch """
     def get_shape(self):
         return self.N
 
@@ -163,24 +157,28 @@ class Patch(object):
         self.shrinkPatchRight()
 
 
-    """ Implementation details """
-    def _setup_cell_centers(self):
-        xcs = []
-        for i in range(self.N.size):
-            #print('i=',i,' N:', self.N, ' dX:', self.dX)
-            xcs.append((np.arange(1, self.N[i] + 1, 1) - 0.5) * self.dX[i])
-
-        self.xc = np.array(xcs)
-
-
     """ Setup internal data structures! """
     def _setup(self, *args, **kwargs):
         nonLocal = kwargs.pop('nonLocal', False)
         if nonLocal:
             self._setup_nonlocal(*args, **kwargs)
 
-        self.data = Data(self.n, self.patchId, self.dX, self.boundaryWidth,
-                         self.dim, ngb = self.ngb, *args, **kwargs)
+        self.data = Data(ngb=self.ngb, *args, **kwargs)
+
+        # now we can set the end
+        self.data.pe = self.ps + self.memory_size()
+
+        # build cell centers
+        self._setup_cell_centers()
+
+
+    """ Creates patch center coordinates - centered around the origin """
+    def _setup_cell_centers(self):
+        xcs = []
+        for i in range(self.N.size):
+            xcs.append((np.arange(1, self.N[i] + 1, 1) - 0.5) * self.dX[i])
+
+        self.xc = np.array(xcs)
 
 
     """ Non-local term special setup """

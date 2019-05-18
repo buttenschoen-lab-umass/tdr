@@ -20,7 +20,7 @@ class Boundary(SimulationObject):
 
         # TODO: is there a better way to do this?
         self.bc_lookup = {'None' : 0, 'Periodic' : 1, 'Neumann' : 2,
-                          'Dirichlet' : 3, 'NoFlux' : 4}
+                          'Dirichlet' : 3, 'NoFlux' : 4, 'StichTogether' : 5}
 
         # default value for value and oNormal
         self.value = 1.
@@ -79,6 +79,14 @@ class Boundary(SimulationObject):
 
     def isDirichlet(self):
         return self.type == self.bc_lookup["Dirichlet"]
+
+
+    def isGlue(self):
+        return self.type == self.bc_lookup["StichTogether"]
+
+
+    def isSeparable(self):
+        return self.type == self.bc_lookup["StichTogether"] or self.type == self.bc_lookup["Neumann"]
 
 
     def __call__(self):
@@ -165,6 +173,18 @@ class Dirichlet(Boundary):
     """ where no boundary conditions are defined """
     def nbc_mask(self):
         return ~self.mask
+
+
+""" To glue together patches """
+class StichTogether(Boundary):
+    def __init__(self, oNormal, *args, **kwargs):
+        super(StichTogether, self).__init__(name = 'StichTogether', oNormal=oNormal)
+
+
+    """ Factory """
+    class Factory:
+        def create(self, *args, **kwargs):
+            return StichTogether(*args, **kwargs)
 
 
 """
@@ -264,11 +284,13 @@ class DomainBoundary(SimulationObject):
 
     """ String """
     def __str__(self):
+        if self.dim == 1:
+            return 'DomainBoundary[left = %s; right = %s]' % (self.left, self.right)
         return "DomainBoundary"
 
 
     def __repr__(self):
-        return "DomainBoundary"
+        return self.__str__()
 
 
     """ public methods """

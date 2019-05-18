@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Author: Andreas Buttenschoen
-from __future__ import print_function, division
+from __future__ import absolute_import, print_function, division
 
 """
     This class implements the scratch space for a given patch. It also compute
@@ -11,7 +11,6 @@ from __future__ import print_function, division
 import numpy as np
 
 from tdr.helpers import asarray
-
 
 class Data(object):
     """
@@ -88,16 +87,21 @@ class Data(object):
         TODO
 
     """
-    def __init__(self, n, patchId, dX, boundaryWidth, dimensions, ngb, *args, **kwargs):
+    def __init__(self, ngb=None, *args, **kwargs):
         # Important numbers
-        self.n                  = n
-        self.dim                = dimensions
-        self.patchId            = patchId
-        self.boundaryWidth      = boundaryWidth
-        self.dX                 = dX
+        self.n                  = kwargs.pop('n')
+        self.patchId            = kwargs.pop('patchId')
+        self.boundaryWidth      = kwargs.pop('boundaryWidth')
+        self.dX                 = kwargs.pop('dX')
+        self.N                  = kwargs.pop('N')
+        self.dim                = self.N.size
         self.boundary           = ngb
 
-        # data
+        # indices of patch data in y - vector
+        self.ps                 = kwargs.pop('start')
+        self.pe                 = None
+
+        # data - this is a slice of memory owned by Grid
         self.ydot               = None
 
         # patch scaling information for deformation support
@@ -136,6 +140,49 @@ class Data(object):
         self._setup(*args, **kwargs)
 
 
+    def __str__(self):
+        return 'Data(%d)' % self.patchId
+
+
+    def __repr__(self):
+        return 'Data(%d)' % self.patchId
+
+
+    """ The number of small volumes in the patch """
+    def size(self):
+        return np.prod(self.N)
+
+
+    """ The size required to store the PDEs on the patch in memory """
+    def memory_size(self):
+        return self.size() * self.n
+
+
+    """ The padded domain integer length """
+    @property
+    def Nx(self):
+        return self.nx + 2 * self.bw
+
+
+    """ setup """
+    def _setup_data(self):
+        self.nx = self.size()
+        self.bw = self.boundaryWidth
+
+        # commonly used values for boundaries
+        self.Cb  = np.arange(0, self.bw)
+        self.nCb = np.arange(self.bw, 0, -1) - 1
+        self.mCb = np.arange(1, -self.bw+1, -1)
+
+        self.y              = np.empty((self.n, self.Nx))
+        self.y[:]           = np.NaN
+
+
+    """ Set ydot """
+    def set_ydot(self, ydot):
+        self.ydot = ydot
+
+
     """ setup function """
     def _setup(self, *args, **kwargs):
         #assert self.boundary is not None, 'Boundary cannot be None!'
@@ -154,18 +201,49 @@ class Data(object):
         # setup possible domain deformation
         self.setup_deformation(*args, **kwargs)
 
+        # setup boundary helpers
+        if self.dim == 1:
+            self._setup_bd_1d()
+        elif self.dim == 2:
+            self._setup_bd_2d()
+        else:
+            assert False, 'Boundaries for dimension %d not supported!' % self.dim
+
+        # setup data
+        self._setup_data()
+
+
+    """ Boundary Helper 1D """
+    def _setup_bd_1d(self):
         # setup boundary conditions
         lBoundary = self.boundary.left
         rBoundary = self.boundary.right
 
-        if lBoundary.isPeriodic() or rBoundary.isPeriodic():
+        if lBoundary.isSeparable() or rBoundary.isSeparable():
+            assert lBoundary.isSeparable(), 'Error: Both boundaries are required to be separable!'
+            assert rBoundary.isSeparable(), 'Error: Both boundaries are required to be separable!'
+
+            if lBoundary.isNeumann():
+                self._boundary_helper_left = self._neumann_set_values_helper_left
+            elif lBoundary.isGlue():
+                self._boundary_helper_left = self._glue_set_values_helper_left
+            else:
+                assert False, 'Can\'t happen!'
+
+            if rBoundary.isNeumann():
+                self._boundary_helper_right = self._neumann_set_values_helper_right
+            elif rBoundary.isGlue():
+                self._boundary_helper_right = self._glue_set_values_helper_right
+            else:
+                assert False, 'Can\'t happen!'
+
+            self._boundary_helper = self._set_values_helper
+        elif lBoundary.isNeumann() or rBoundary.isNeumann():
+            self._boundary_helper = self._neumann_set_values_helper
+        elif lBoundary.isPeriodic() or rBoundary.isPeriodic():
             assert lBoundary.isPeriodic(), 'Error: Both boundaries are required to be periodic!'
             assert rBoundary.isPeriodic(), 'Error: Both boundaries are required to be periodic!'
             self._boundary_helper = self._periodic_set_values_helper
-        elif lBoundary.isNeumann() or rBoundary.isNeumann():
-            assert lBoundary.isNeumann(), 'Error: Both boundaries are required to be Neumann!'
-            assert rBoundary.isNeumann(), 'Error: Both boundaries are required to be Neumann!'
-            self._boundary_helper = self._neumann_set_values_helper
         elif lBoundary.isNoFlux() or rBoundary.isNoFlux():
             assert lBoundary.isNoFlux(), 'Error: Both boundaries are required to be Neumann!'
             assert rBoundary.isNoFlux(), 'Error: Both boundaries are required to be Neumann!'
@@ -176,6 +254,11 @@ class Data(object):
             self._boundary_helper = self._dirichlet_set_values_helper
         else:
             print("WARNING: No special boundary handling enabled!")
+
+
+    """ Boundary Helper 2D """
+    def _setup_bd_2d(self):
+        assert False, 'Not implemented!'
 
 
     """ setup deformation """
@@ -233,24 +316,21 @@ class Data(object):
     def set_values_1d(self, t, y):
         # compute time-step
         self._set_timestep(t)
+        bw = self.bw
 
-        bw                  = self.boundaryWidth
-        nx                  = y.shape[1]
-        self.y              = np.empty((self.n, nx + 2 * bw))
-        self.y[:]           = np.NaN
         if bw > 0:
-            self.y[:, bw:-bw]   = y
+            self.y[:, bw:-bw]   = y[:, self.ps:self.pe]
         else:
-            self.y[:] = y
+            self.y[:, :] = y[:, self.ps:self.pe]
 
         # make sure this runs before deform!
         self.r_dot_over_r       = 0.
 
         # reset ydot
-        self.ydot           = np.zeros((self.n, nx))
+        self.ydot.fill(0)
 
         # Deal with any boundary updates that are required by the boundary conditions
-        self._boundary_helper(bw, nx)
+        self._boundary_helper(y)
 
         # do possible deformation
         if self.deformation is not None:
@@ -260,59 +340,76 @@ class Data(object):
         self._reset()
 
 
-    """ Helpers for dealing with boundary conditions """
-    def _periodic_set_values_helper(self, bw, nx):
+    """ Helper for dealing with periodic boundary conditions """
+    def _periodic_set_values_helper(self, y):
+        bw = self.bw
+
         # Left boundary
         nCb = np.arange(-bw, 0)
-        self.y[:, 0:bw] = self.y[:, nCb + nx + bw]
+        self.y[:, 0:bw] = self.y[:, nCb + self.nx + bw]
 
         # Right boundary
         Cb = np.arange(0, bw)
-        self.y[:, Cb + nx + bw] = self.y[:, bw + Cb]
+        self.y[:, Cb + self.nx + bw] = self.y[:, bw + Cb]
 
 
-    def _neumann_set_values_helper(self, bw, nx):
-        # Left Boundary
+    """ Combine left + right boundary helpers for Neumann and Glueing """
+    def _set_values_helper(self, y):
+        print('set value helper')
+        self._boundary_helper_left(y)
+        self._boundary_helper_right(y)
 
+
+    """ Helper for glueing two patches together """
+    def _glue_set_values_helper_left(self, y):
+        # simply grab the two values left of the current patch
+        self.y[:, 0:self.bw] = y[:, self.ps-self.bw:self.ps]
+
+
+    def _glue_set_values_helper_right(self, y):
+        # simply grab the two values right of the current patch
+        self.y[:, self.Cb + self.nx + self.bw] = y[:, self.pe:self.pe+self.bw]
+
+
+    """ Helper for dealing with right / left boundaries being Neumann """
+    def _neumann_set_values_helper_left(self, y):
         # This setups the boundary as follows: Here || denotes the boundary
         # | y1 | y0 || y0 | y1 |
-        nCb = np.arange(bw, 0, -1) - 1
-        self.y[:, 0:bw] = self.y[:, nCb + bw]
+        self.y[:, 0:self.bw] = self.y[:, self.nCb + self.bw]
 
-        # Right boundary
 
+    def _neumann_set_values_helper_right(self, y):
         # This setups the boundary as follows: Here || denotes the boundary
         # | yN-1 | yN || yN | yN-1 |
-        Cb  = np.arange(0, bw)
-        nCb = np.arange(1, -bw+1, -1)
-        self.y[:, Cb + nx + bw] = self.y[:, nCb + nx]
+        self.y[:, self.Cb + self.nx + self.bw] = self.y[:, self.mCb + self.nx]
 
 
     """ Implementation of no-flux boundary conditions """
-    def _noflux_set_values_helper(self, bw, nx):
-        # Left Boundary
-
-        # This setups the boundary as follows: Here || denotes the boundary
-        # | y1 | y0 || y0 | y1 |
-        nCb = np.arange(bw, 0, -1) - 1
-        self.y[:, 0:bw] = self.y[:, nCb + bw]
-
-        # Right boundary
-
-        # This setups the boundary as follows: Here || denotes the boundary
-        # | yN-1 | yN || yN | yN-1 |
-        Cb  = np.arange(0, bw)
-        nCb = np.arange(1, -bw+1, -1)
-        self.y[:, Cb + nx + bw] = self.y[:, nCb + nx]
+    def _noflux_set_values_helper(self, y):
+        # TODO ensure that we can call these separately!
+        self._noflux_set_values_helper_left(y)
+        self._noflux_set_values_helper_right(y)
 
         # update boundary values
-        self._compute_boundary_approx_noflux_1d(bw)
+        self._compute_boundary_approx_noflux_1d(self.bw)
+
+
+    def _noflux_set_values_helper_left(self, y):
+        # This setups the boundary as follows: Here || denotes the boundary
+        # | y1 | y0 || y0 | y1 |
+        self.y[:, 0:self.bw] = self.y[:, self.nCb + self.bw]
+
+
+    def _noflux_set_values_helper_right(self, y):
+        # This setups the boundary as follows: Here || denotes the boundary
+        # | yN-1 | yN || yN | yN-1 |
+        self.y[:, self.Cb + self.nx + self.bw] = self.y[:, self.mCb + self.nx]
 
 
     """ Implementation of dirichlet boundary conditions """
-    def _dirichlet_set_values_helper(self, bw, nx):
+    def _dirichlet_set_values_helper(self, y):
         # use the above mentioned extrapolations
-        y = self.y[:, bw:-bw]
+        y = self.y[:, self.bw:-self.bw]
 
         # Left Boundary
 
@@ -322,8 +419,7 @@ class Data(object):
         nask = self.boundary.left.nbc_mask()
 
         # in some place we need to reflect for NoBC
-        nCb = np.arange(bw, 0, -1) - 1
-        self.y[:, 0:bw] = mask * self.boundary.left(y) + nask * self.y[:, nCb + bw]
+        self.y[:, 0:self.bw] = mask * self.boundary.left(y) + nask * self.y[:, self.nCb + self.bw]
 
         # Right Boundary
         # This setups the boundary as follows: Here || denotes the boundary
@@ -331,12 +427,10 @@ class Data(object):
         mask = self.boundary.right.bc_mask()
         nask = self.boundary.right.nbc_mask()
 
-        Cb  = np.arange(0, bw)
-        nCb = np.arange(1, -bw+1, -1)
-        self.y[:, Cb + nx + bw] = mask * self.boundary.right(y) + nask * self.y[:, nCb + nx]
+        self.y[:, self.Cb + self.nx + self.bw] = mask * self.boundary.right(y) + nask * self.y[:, self.mCb + self.nx]
 
         # setup boundary approximations
-        self._compute_boundary_approx_dirichlet_1d(bw)
+        self._compute_boundary_approx_dirichlet_1d(self.bw)
 
 
     """ Compute boundary approximations in the presence of no-flux BC in 1d.
@@ -425,7 +519,7 @@ class Data(object):
             self.y[:] = y
 
         # reset ydot
-        self.ydot           = np.zeros((self.n, nx, ny))
+        self.ydot.fill(0)
 
         # let's define periodic boundary conditions by default for the begining
         # x-boundary
@@ -506,48 +600,3 @@ class Data(object):
     def _compute_uAvy_2d(self):
         bw = self.boundaryWidth
         self.uAvy = 0.5 * (self.y[:, bw:-bw, bw:-bw+1] + self.y[:, bw:-bw, bw-1:-bw])
-
-
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-
-    # create data object
-    data = Data(2, 1)
-
-    L = 10
-    n = L * 2**5
-    h = 1. / (2**5)
-    x = np.linspace(0, L, n)
-    y1 = np.sin(2. * np.pi * x / L)
-    e1 = (2. * np.pi / L) * np.cos(2. * np.pi * x / L)
-    y2 = np.cos(2. * np.pi * x / L)
-    e2 = -(2. * np.pi / L) * np.sin(2. * np.pi * x / L)
-
-    data.boundaryWidth = 2
-    data.set_values(np.vstack((y1, y2)))
-    data.h = h
-    data._compute_uDx()
-    data._compute_uAvx()
-
-    plt.figure(figsize=(15, 7.5))
-    plt.subplot(1,3,1)
-    plt.plot(x, y1, label='y1')
-    plt.plot(x, y2, label='y2')
-    plt.legend(loc='best')
-    plt.grid()
-
-    plt.subplot(1,3,2)
-    plt.plot(x, data.uDx[0, 1:-1], label='d/dx y1')
-    plt.plot(x, e1, label='e1')
-    plt.legend(loc='best')
-    plt.grid()
-
-    plt.subplot(1,3,3)
-    plt.plot(x, data.uDx[1, 1:-1], label='d/dx y2')
-    plt.plot(x, e2, label='e2')
-    plt.legend(loc='best')
-    plt.grid()
-
-    plt.show()
-
-

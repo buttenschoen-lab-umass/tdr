@@ -5,7 +5,7 @@ from __future__ import print_function, division
 
 import numpy as np
 from tdr.helpers import asarray, round_to_nearest_fraction
-from tdr.Boundary import DomainBoundary
+from tdr.Boundary import DomainBoundary, StichTogether
 
 from SimulationObject.SimulationObject import SimulationObject
 from SimulationObject.SimulationObjectFactory import createSimObject
@@ -25,10 +25,18 @@ class Interval(SimulationObject):
 
         # set the basic parameters
         self.name               = kwargs.pop('name', 'x')
-        self.endPoints          = np.array([a, b])
+
+        # save actual boundaries
+        self.a = a
+        self.b = b
+
+        # in general stored like
+        # [ start_patch1, end_patch1]
+        # [ start_patch2, end_patch2]
+        self.endPoints          = np.expand_dims(np.array([a, b]), axis=0)
 
         # number of patches -> in 1D always one
-        self.nop                = 1
+        self.nop                = kwargs.pop('nop', 1)
 
         # check if we have a xml node
         xml = kwargs.pop('xml', None)
@@ -60,12 +68,22 @@ class Interval(SimulationObject):
     """ Properties """
     @property
     def x0(self):
-        return self.endPoints[0]
+        return np.min(self.endPoints[:, 0])
+
+
+    @property
+    def x0s(self):
+        return self.endPoints[:, 0]
 
 
     @property
     def xf(self):
-        return self.endPoints[1]
+        return np.max(self.endPoints[:, 1])
+
+
+    @property
+    def xfs(self):
+        return self.endPoints[:, 1]
 
 
     """ Creation """
@@ -114,20 +132,43 @@ class Interval(SimulationObject):
 
     """ Internal methods """
     def _reset(self):
-        self.L                  = np.abs(self.xf - self.x0)
+        # at the moment assume uniform partitions when nop is larger one
+        self.L      = np.abs(self.xf - self.x0)
+        self.L_part = self.L / self.nop
 
         if self.useFixedN:
+            assert self.nop==1, 'not tested with more than one patch!'
             self.cellsPerUnitLength = self.N / self.L
             assert self.N == np.int(self.L * self.cellsPerUnitLength), ''
         else:
-            self.N                  = np.int(self.L * self.cellsPerUnitLength)
+            self.N = np.tile(np.int(self.L_part * self.cellsPerUnitLength), self.nop)
 
         self.h                  = 1. / self.cellsPerUnitLength
-        self.dX                 = asarray(self.h)
+        self.dX                 = np.tile(self.h, self.nop)
+
+        # must update endpoints
+        self.endPoints = np.zeros((self.nop, 2))
+        patchBd        = np.linspace(self.a, self.b, 1+self.nop, endpoint=True)
+        for i in range(self.nop):
+            self.endPoints[i, :] = np.asarray([patchBd[i], patchBd[i+1]])
+
+
+        # if we have multiple patches setup self.bds
+        self.bds = self.nop * [None]
+        for i in range(self.nop):
+            if i == 0:
+                bd = DomainBoundary(dim=self.dimensions, left=self.bd.left, right=StichTogether(1))
+            elif i == self.nop-1:
+                bd = DomainBoundary(dim=self.dimensions, left=StichTogether(-1), right=self.bd.right)
+            else:
+                bd = DomainBoundary(dim=self.dimensions, left=StichTogether(-1.), right=StichTogether(1.))
+            self.bds[i] = bd
+
+        # now compute and cache x
         self.x                  = self.xs()
 
-        assert self.dX > 0, 'Interval must have non-negative step size.'
-        assert self.N > 1, 'Interval N = %d must be larger than 1.' % self.N
+        assert np.all(self.dX > 0), 'Interval must have non-negative step size.'
+        assert np.all(self.N > 1), 'Interval N = %s must be larger than 1.' % self.N
         assert self.L > 0, 'Interval must have non-negative length.'
 
 
@@ -142,7 +183,7 @@ class Interval(SimulationObject):
 
 
     def xs(self):
-        return np.linspace(self.x0, self.xf, self.N, endpoint=True)
+        return np.linspace(self.x0, self.xf, np.sum(self.N), endpoint=True)
 
 
     def box(self):

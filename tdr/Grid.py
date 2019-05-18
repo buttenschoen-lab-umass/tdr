@@ -9,12 +9,12 @@ from tdr.helpers import expand_dims
 
 
 class Grid(object):
-    def __init__(self, n, grd, dim, *args, **kwargs):
+    def __init__(self, n, domain, *args, **kwargs):
         # number of concentration fields
         self.n = n
 
         ## dimensions
-        self.dim = dim
+        self.dim = domain.dimensions
 
         # boundary width
         self.boundaryWidth = kwargs.pop('bw', 0)
@@ -22,20 +22,20 @@ class Grid(object):
         # cell centers
         self.cellCentreMatrix = None
 
-        # TODO needed?
+        # molsize is the size of the y - vector
         self.molsize  = 0
+
+        # gridsize is the total number of discretization volumes
         self.gridsize = 0
 
         # map to patches
-        self.patches = {}
+        self.patches = []
 
-        # patch start
-        self.ps = {}
-        # patch end
-        self.pe = {}
+        # the main memory for ydot
+        self.ydot = None
 
         # setup
-        self._setup(grd, *args, **kwargs)
+        self._setup(domain, *args, **kwargs)
 
 
     """ Public methods """
@@ -54,10 +54,11 @@ class Grid(object):
 
     """ update grid information """
     def update(self, t, y):
-        # TODO need to unwrap y
-        for patch in self.patches.values():
+        for patch in self.patches:
             # The patch update function has to run before any deformations!
             patch.update(t, y)
+
+            print('ydot:', self.ydot)
 
 
     """ Apply fluxes for all patches """
@@ -74,28 +75,12 @@ class Grid(object):
         return self.patches[patchId].N
 
 
-    def get_start(self, patchId):
-        return self.ps[patchId]
-
-
-    def get_end(self, patchId):
-        return self.pe[patchId]
-
-
     def get_ydot(self):
-        ret = np.zeros((self.n * self.gridsize))
-        for patchId, patch in self.patches.items():
-            # TODO make more general
-            pstart = self.ps[patchId]
-            pend   = self.pe[patchId]
-            ret[pstart:pend] = patch.get_ydot().flatten()
-
-        return ret
+        return self.ydot
 
 
     def elongate(self, where, direction):
-        # TODO fill in
-        pass
+        assert False, 'Not implemented!'
 
 
     def shape(self):
@@ -117,72 +102,67 @@ class Grid(object):
 
 
     """ Setup any required internal data structures """
-    def _setup(self, grd, *args, **kwargs):
-        nonLocal = kwargs.pop('nonLocal', False)
-        self._init_patches(grd, nonLocal, *args, **kwargs)
+    def _setup(self, domain, *args, **kwargs):
+        self._init_patches(domain, *args, **kwargs)
 
         # Setup internal data structures
         self._compute_size()
         self._compute_cellCenter()
 
+        # setup ydot
+        self.ydot = np.zeros(self.molsize)
 
-    def _init_patches(self, grd, nonLocal, *args, **kwargs):
-        nop = grd['nop']
-        ngb = grd['ngb']
-        dX  = grd['dX']
-        N   = grd['N']
-        x0  = grd['x0']
+        # assign memory to patches
+        self._assign_memory_patches()
 
-        if nop == 1: # and isinstance(ngb, DomainBoundary):
-            # expand dims if required
-            dX = expand_dims(dX, self.dim)
-            N  = expand_dims(N,  self.dim)
-            x0 = expand_dims(x0, self.dim)
 
+    def _init_patches(self, domain, *args, **kwargs):
+        # By default assuming we do not require non-local operator support
+        nonLocal = kwargs.pop('nonLocal', False)
+
+        nop = domain.nop
+        N   = domain.N
+        x0  = domain.x0s
+        ngb = domain.bds
+        dX  = domain.dX
+
+        offset = 0
         for i in range(nop):
-            self.patches[i] = Patch(self.n, i + 1, x0[i], dX[i], N[i],
-                                    ngb             = ngb[i],
-                                    boundaryWidth   = self.boundaryWidth,
-                                    nonLocal        = nonLocal,
-                                    *args, **kwargs)
+            # FIXME - make sure the dimensions are correct
+            dX_i = expand_dims(dX[i], self.dim)
+            N_i  = expand_dims(N[i],  self.dim)
+            x0_i = expand_dims(x0[i], self.dim)
 
-            # TODO make more general!
-            self.ps[i] = 0
-            self.pe[i] = int(self.n * np.prod(N[i]))
+            patch = Patch(n=self.n, start=offset, x0=x0_i, dX=dX_i, N=N_i,
+                          patchId=i+1, ngb=ngb[i], boundaryWidth=self.boundaryWidth,
+                          nonLocal=nonLocal, *args, **kwargs)
+
+            # define locations of a patch in the general y - vector
+            offset += patch.memory_size()
+
+            # save patch
+            self.patches.append(patch)
 
 
+    """ Give each patch access to its component of the ydot vector """
+    def _assign_memory_patches(self):
+        for patch in self.patches:
+            patch.set_ydot(self.ydot[patch.ps:patch.pe].reshape((self.n, patch.size())))
+
+
+    """ Compute the Grids physical size and memory size """
     def _compute_size(self):
         self.gridsize = 0
-        for patchId, patch in self.patches.items():
+        self.molsize  = 0
+        for patch in self.patches:
             self.gridsize += patch.size()
+            self.molsize  += patch.memory_size()
 
 
+    """ Computes the centers for the whole grid """
     def _compute_cellCenter(self):
         self.cellCentreMatrix = np.zeros((self.gridsize, self.dim))
-        offset = 0
-        for patchId, patch in self.patches.items():
-            self.cellCentreMatrix = np.insert(self.cellCentreMatrix,
-                                              offset, patch.cellCenters(),
-                                              axis=0)
 
-
-if __name__ == '__main__':
-    cellsPerUnitLength = 10
-    h = 1. / cellsPerUnitLength
-    L = 1.
-
-    nop = 1
-    ngb = np.array([[1, 1, 1, 1]])
-    dX  = np.array([[h, h]])
-    x0  = np.array([[0, 0]])
-    N   = np.array([[L * cellsPerUnitLength, L * cellsPerUnitLength]]).astype(int)
-
-    grd = { 'nop' : nop, 'ngb' : ngb, 'dX' : dX, 'N' : N, 'x0' : x0}
-
-    n = 2
-    grid = Grid(n, grd, 2)
-
-
-
-
+        for patch in self.patches:
+            self.cellCentreMatrix[patch.ps:patch.pe, :] = patch.cellCenters()
 

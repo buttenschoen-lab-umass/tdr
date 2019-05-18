@@ -335,10 +335,8 @@ class TDR(object):
             # this is only for house-keeping
             # self.dom.setup_deformation(deformation)
 
-        # grid information
-        grd = { 'nop' : nop, 'ngb' : ngb, 'dX' : dX, 'N' : N, 'x0' : x0}
-
-        self.grid = Grid(self.size, grd, self.dimensions, bw=self.get_bw(),
+        # create a Grid
+        self.grid = Grid(self.size, dom, bw=self.get_bw(),
                          nonLocal = self.hasNonLocal(), r=deformation, dr=dr,
                          *args, **kwargs)
 
