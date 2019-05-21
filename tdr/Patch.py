@@ -56,7 +56,7 @@ class Patch(object):
     """
     def __init__(self, *args, **kwargs):
         self.x0     = kwargs.pop('x0')
-        self.N      = kwargs.get('N')
+        self.N      = np.asarray(kwargs.get('N'), np.int)
         self.dim    = self.N.size
         self.ngb    = kwargs.pop('ngb', DomainBoundary(self.dim))
 
@@ -196,7 +196,7 @@ class Patch(object):
 
 
     def _setup_nonlocal(self, *args, **kwargs):
-        assert self.dX.size == 1, 'not implemented'
+        assert self.dX.size == 1, 'Non-local operator support only available for a single patch!'
         mode     = self._nonlocal_mode(*args, **kwargs)
         int_mode = kwargs.pop('int_mode', 'uniform')
         beta0 = kwargs.pop('beta0', 0.)

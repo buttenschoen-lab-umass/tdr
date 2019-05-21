@@ -58,12 +58,10 @@ class Grid(object):
             # The patch update function has to run before any deformations!
             patch.update(t, y)
 
-            print('ydot:', self.ydot)
-
 
     """ Apply fluxes for all patches """
     def apply_flux(self, flux, t):
-        for patch in self.patches.values():
+        for patch in self.patches:
             patch.apply_flux(flux, t)
 
 
@@ -85,7 +83,7 @@ class Grid(object):
 
     def shape(self):
         shp = np.zeros(self.dim, dtype=np.int)
-        for patch in self.patches.values():
+        for patch in self.patches:
             shp += patch.get_shape()
 
         return shp
@@ -93,7 +91,7 @@ class Grid(object):
 
     """ Implementation details """
     def __iter__(self):
-        for patch in self.patches.values():
+        for patch in self.patches:
             yield patch
 
 

@@ -12,6 +12,7 @@ import numpy as np
 
 from tdr.helpers import asarray
 
+
 class Data(object):
     """
         Scratch space for computations of ydot in a patch.
@@ -89,11 +90,11 @@ class Data(object):
     """
     def __init__(self, ngb=None, *args, **kwargs):
         # Important numbers
-        self.n                  = kwargs.pop('n')
+        self.n                  = np.asarray(kwargs.pop('n'), np.int)
         self.patchId            = kwargs.pop('patchId')
         self.boundaryWidth      = kwargs.pop('boundaryWidth')
         self.dX                 = kwargs.pop('dX')
-        self.N                  = kwargs.pop('N')
+        self.N                  = np.asarray(kwargs.pop('N'), np.int)
         self.dim                = self.N.size
         self.boundary           = ngb
 
@@ -355,7 +356,6 @@ class Data(object):
 
     """ Combine left + right boundary helpers for Neumann and Glueing """
     def _set_values_helper(self, y):
-        print('set value helper')
         self._boundary_helper_left(y)
         self._boundary_helper_right(y)
 

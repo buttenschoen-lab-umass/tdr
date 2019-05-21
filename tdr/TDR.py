@@ -19,6 +19,7 @@ from tdr.FluxDilution import DilutionFlux
 
 from tdr.helpers import zeros, asarray, offdiagonal
 
+
 """
     This class implements a Taxis-Diffusion-Reaction Solver for parabolic
     partial differential equations.
@@ -131,7 +132,7 @@ class TDR(object):
 
     def __init__(self, *args, **kwargs):
         # terms
-        self.version        = 'TDR-python-0.1'
+        self.version        = 'TDR-python-0.2'
         self.size           = kwargs.pop('noPDEs', 1)
         self.dimensions     = None
         self.bw             = kwargs.pop('bw', 0)
@@ -197,7 +198,7 @@ class TDR(object):
 
 
     """ The next two are equivalent at the moment for easy checking for any
-        deformations that may be occurings.
+        deformations that may be occurring.
     """
     def hasDilution(self):
         return self.haveDilutionTerms
@@ -293,12 +294,7 @@ class TDR(object):
     def _setup(self, *args, **kwargs):
         # Load Grid data and create Grid
         # number of patches
-        nop = self._get_nops(kwargs.pop('nop', 1))
         dom = kwargs.pop('domain', Interval(0, 1))
-        ngb = np.asarray(dom.bd).reshape(1)
-        dX  = asarray(dom.dX)
-        x0  = asarray(dom.origin())
-        N   = asarray(dom.N, np.int)
 
         # set time to initial time
         self.t = kwargs.pop('t0', 0.)
@@ -394,15 +390,11 @@ class TDR(object):
         self.t = t
 
         # TODO Can i get rid of this potential copy here?
-        # Is this even really a copy?
+        # Is this even really a copy? Most of the time its not!
         self.y = self.reshape(y)
 
         # update the grid!
         self.grid.update(t, self.y)
-
-        # TODO: FIXME
-        # just to keep information up to date
-        # self.dom.deform(t)
 
         # For the moment only update fluxes if deformation is set
         if self.hasDeformation():
