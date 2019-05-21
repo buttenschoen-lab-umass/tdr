@@ -131,6 +131,25 @@ class Interval(SimulationObject):
 
 
     """ Internal methods """
+    def _setup_bds(self):
+        self.bds = self.nop * [None]
+
+        # if we only have one patch -> don't do anything special
+        if self.nop == 1:
+            self.bds[0] = self.bd
+            return
+
+        # if we have more than one patch -> create smaller subdomains
+        for i in range(self.nop):
+            if i == 0:
+                bd = DomainBoundary(dim=self.dimensions, left=self.bd.left, right=StichTogether(1))
+            elif i == self.nop-1:
+                bd = DomainBoundary(dim=self.dimensions, left=StichTogether(-1), right=self.bd.right)
+            else:
+                bd = DomainBoundary(dim=self.dimensions, left=StichTogether(-1.), right=StichTogether(1.))
+            self.bds[i] = bd
+
+
     def _reset(self):
         # at the moment assume uniform partitions when nop is larger one
         self.L      = np.abs(self.xf - self.x0)
@@ -152,17 +171,8 @@ class Interval(SimulationObject):
         for i in range(self.nop):
             self.endPoints[i, :] = np.asarray([patchBd[i], patchBd[i+1]])
 
-
-        # if we have multiple patches setup self.bds
-        self.bds = self.nop * [None]
-        for i in range(self.nop):
-            if i == 0:
-                bd = DomainBoundary(dim=self.dimensions, left=self.bd.left, right=StichTogether(1))
-            elif i == self.nop-1:
-                bd = DomainBoundary(dim=self.dimensions, left=StichTogether(-1), right=self.bd.right)
-            else:
-                bd = DomainBoundary(dim=self.dimensions, left=StichTogether(-1.), right=StichTogether(1.))
-            self.bds[i] = bd
+        # setup bds
+        self._setup_bds()
 
         # now compute and cache x
         self.x                  = self.xs()
