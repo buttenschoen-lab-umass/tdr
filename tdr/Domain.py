@@ -213,7 +213,7 @@ class Interval(SimulationObject):
 
 
     def __repr__(self):
-        return 'Interval(%.2f, %.2f, %.4g, %d, %s, %s)' \
+        return 'Interval(%.2f, %.2f, %.4g, %s, %s, %s)' \
                 % (self.x0, self.xf, self.h, self.N, self.bd.left.name, self.bd.right.name)
 
 
