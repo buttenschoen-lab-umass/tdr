@@ -178,23 +178,26 @@ class tdrTest1D(unittest.TestCase):
         # reset solver
         self.solver = None
 
-        # 1D
-        self.nop = 1
+        # Test for various numbers of patches
+        self.nops = [2, 3, 5]
+
+        # current number of patches
+        self.nop  = 1
 
         # norm functionals
         self.norm1 = lambda x : norm1(x, self.interval.h)
         self.norm2 = lambda x : norm2(x, self.interval.h)
 
-        # Make sure these values are resetted
+        # Make sure these values are reset
         self.name = 'Unknown'
         self.expected_errors = {}
 
 
     """ Functions that setup constants for taxis tests """
-    def _taxis_setup(self):
+    def _taxis_setup(self, nop=1):
         self.L = 0.5
         self.time_round = 4
-        self.interval = Interval(-self.L, self.L, n = 12)
+        self.interval = Interval(-self.L, self.L, n = 12, nop=nop)
         self.dt       = 0.0001
 
         # number of equations
@@ -212,16 +215,16 @@ class tdrTest1D(unittest.TestCase):
         self.trans[1, 0] = 1.
         self.trans[1, 1] = 0.
 
-        # functors for analyical solutions
+        # functors for analytical solutions
         self.ansoln = {0 : lambda t, x : concentrationField(t, x),
                        1 : lambda t, x : n(t, x)}
 
 
     """ Functions that setup constants for diffusion tests """
-    def _diffusion_setup(self):
+    def _diffusion_setup(self, nop=1):
         self.L = 2.
         self.time_round = 2
-        self.interval = Interval(0, self.L, n = 12)
+        self.interval = Interval(0, self.L, n = 12, nop=nop)
 
         # number of equations
         #
@@ -261,7 +264,7 @@ class tdrTest1D(unittest.TestCase):
         # Create solver object
         y0 = ic_gen()
 
-        self.solver = MOL(TDR, y0, nop = self.nop, domain = self.interval,
+        self.solver = MOL(TDR, y0, domain = self.interval,
                           livePlotting=False, transitionMatrix = self.trans,
                           time = time, vtol=self.vtol)
 
@@ -382,10 +385,10 @@ class tdrTest1D(unittest.TestCase):
 
 
     def test_taxis1d_short_time(self):
-        self._taxis_setup()
+        self._taxis_setup(self.nop)
 
         # set name
-        self.name = 'taxis1d_short_time_test'
+        self.name = 'taxis1d_short_time_test_%d' % self.nop
         self.expected_errors = {0 : 1e-16, 1 : 1e-3}
 
         # check outdir
@@ -409,11 +412,18 @@ class tdrTest1D(unittest.TestCase):
         self.verify_error(mask)
 
 
+    def test_taxis1d_short_time_patches(self):
+        for nop in self.nops:
+            self.nop = nop
+
+            self.test_taxis1d_short_time()
+
+
     def test_taxis1d_medium_time(self):
-        self._taxis_setup()
+        self._taxis_setup(self.nop)
 
         # set name
-        self.name = 'taxis1d_medium_time_test'
+        self.name = 'taxis1d_medium_time_test_%d' % self.nop
         self.expected_errors = {0 : 1e-16, 1 : 1e-3}
 
         # check outdir
@@ -437,11 +447,18 @@ class tdrTest1D(unittest.TestCase):
         self.verify_error(mask)
 
 
+    def test_taxis1d_medium_time_patches(self):
+        for nop in self.nops:
+            self.nop = nop
+
+            self.test_taxis1d_medium_time()
+
+
     def test_taxis1d_long_time(self):
-        self._taxis_setup()
+        self._taxis_setup(self.nop)
 
         # set name
-        self.name = 'taxis1d_long_time_test'
+        self.name = 'taxis1d_long_time_test_%d' % self.nop
         self.expected_errors = {0 : 1e-16, 1 : 1e-3}
 
         # check outdir
@@ -465,12 +482,19 @@ class tdrTest1D(unittest.TestCase):
         self.verify_error(mask)
 
 
-    def test_diffusion1d_neumann(self):
-        self._diffusion_setup()
+    def test_taxis1d_long_time_patches(self):
+        for nop in self.nops:
+            self.nop = nop
+
+            self.test_taxis1d_long_time()
+
+
+    def test_diffusion1d_neumann(self, exp_err=1e-4):
+        self._diffusion_setup(nop=self.nop)
 
         # set name
-        self.name = 'diffusion1d_neumann_test'
-        self.expected_errors = {0 : 1e-4}
+        self.name = 'diffusion1d_neumann_test_%d' % self.nop
+        self.expected_errors = {0 : exp_err}
 
         # check outdir
         self.check_outdir()
@@ -489,5 +513,13 @@ class tdrTest1D(unittest.TestCase):
         self.verify_error()
 
 
+    def test_diffusion1d_neumann_patches(self):
+        for nop in self.nops:
+            self.nop = nop
+
+            self.test_diffusion1d_neumann(exp_err=1e-4)
+
+
 if __name__ == '__main__':
     unittest.main()
+
