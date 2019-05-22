@@ -272,11 +272,17 @@ class tdrTest1D(unittest.TestCase):
 
 
     """ Data handling + plotting output """
+    def transpose_dfs(self):
+        dfs = copy.deepcopy(self.solver.dfs)
+        for key, df in dfs.items():
+            dfs[key] = df.transpose()
+        return dfs
+
+
     def mask_dfs(self, mask):
-        dfs = self.solver.dfs
+        dfs = self.transpose_dfs()
         ndfs = {}
         for key, df in dfs.items():
-            df = df.transpose()
             cols = df.columns.values
             ndfs[key] = pd.DataFrame()
             ndf = ndfs[key]
