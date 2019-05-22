@@ -311,12 +311,6 @@ class DomainBoundary(SimulationObject):
         return self.left.isDirichlet() and self.right.isDirichlet()
 
 
-if __name__ == '__main__':
-    print('test')
-
-    bc = Neumann()
-    print(bc)
-    print(bc.isNeumann())
-    print(bc.isDirichlet())
-
+    def isMixed(self):
+        return not(self.left.type == self.right.type)
 

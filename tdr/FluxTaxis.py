@@ -48,11 +48,10 @@ class TaxisFlux(Flux):
                 print('Variable taxis coefficient!')
                 self._taxisCall = self._flux_1d_variable
 
+            # TODO: FIXME doesn't work for more than a single patch
             if self.bd.isNoFlux():
                 self._bc_call = self._noflux_bc_1d
-            elif self.bd.isNeumann():
-                self._bc_call = self._neumann_bc_1d
-            else:
+            else: # Everything else but NoFlux Boundary conditions
                 self._bc_call = self._dummy_bc_1d
 
         elif self.dim == 2:
@@ -112,7 +111,6 @@ class TaxisFlux(Flux):
         if i == j: # this means diffusion!
             return
 
-        # TODO suppose that the coefficient is constant for the moment
         pij   = self.trans[i, j]
         if pij != 0.:
             self.velNonZero = True
@@ -137,7 +135,7 @@ class TaxisFlux(Flux):
         if pij != 0.:
             self.velNonZero = True
 
-            # get the state interpolatant
+            # get the state interpolate
             uDx  = patch.data.uDx[j, :]
 
             # get the average to interpolate value on the cell boundary
@@ -246,7 +244,6 @@ class TaxisFlux(Flux):
     def _noflux_bc_1d(self, i, patch, taxisApprox):
         # TODO: Deal with zero diffusion constants etc. and non-zero flux boundaries
         taxisApprox[[0, -1]] = patch.data.get_bd_taxis(i, self.vij[[0, -1]])
-        return
 
 
     """ 2D implementation """
@@ -308,12 +305,6 @@ class TaxisFlux(Flux):
 
         # Now compute HT
         patch.data.ydot[i, :] -= (1. / dx[1]) * (taxisApprox[:, 1:] - taxisApprox[:, :-1])
-
-
-    """ Modifications required for Neumann bc """
-    def _neumann_bc_1d(self, i, patch, taxisApprox):
-        taxisApprox[[0, -1]] = np.zeros_like(self.vij[[0, -1]])
-        return
 
 
     """ EXPERIMENTAL: update adh-trans for bifurcation continuations """

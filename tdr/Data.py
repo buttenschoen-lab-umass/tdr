@@ -356,6 +356,7 @@ class Data(object):
 
     """ Combine left + right boundary helpers for Neumann and Glueing """
     def _set_values_helper(self, y):
+        self._reset_boundary_approx_1d()
         self._boundary_helper_left(y)
         self._boundary_helper_right(y)
 
@@ -365,10 +366,16 @@ class Data(object):
         # simply grab the two values left of the current patch
         self.y[:, 0:self.bw] = y[:, self.ps-self.bw:self.ps]
 
+        # update boundary approximation
+        # self.boundary_approx[:, 0] = np.zeros((self.n, 1))
+
 
     def _glue_set_values_helper_right(self, y):
         # simply grab the two values right of the current patch
         self.y[:, self.Cb + self.nx + self.bw] = y[:, self.pe:self.pe+self.bw]
+
+        # update boundary approximation
+        # self.boundary_approx[:, 1] = np.zeros((self.n, 1))
 
 
     """ Helper for dealing with right / left boundaries being Neumann """
@@ -377,11 +384,17 @@ class Data(object):
         # | y1 | y0 || y0 | y1 |
         self.y[:, 0:self.bw] = self.y[:, self.nCb + self.bw]
 
+        # update boundary values -> don't have to change anything
+        # self.boundary_approx[:, 0] = np.zeros((self.n, 1))
+
 
     def _neumann_set_values_helper_right(self, y):
         # This setups the boundary as follows: Here || denotes the boundary
         # | yN-1 | yN || yN | yN-1 |
         self.y[:, self.Cb + self.nx + self.bw] = self.y[:, self.mCb + self.nx]
+
+        # update boundary values -> don't have to change anything
+        # self.boundary_approx[:, 1] = np.zeros((self.n, 1))
 
 
     """ Implementation of no-flux boundary conditions """
@@ -441,9 +454,7 @@ class Data(object):
 
     """
     def _compute_boundary_approx_noflux_1d(self, bw):
-        self.boundary_approx    = np.zeros((self.n, 2))
-        self.taxis_bd_aprx      = np.zeros((self.n, 2))
-        self.diffusion_bd_aprx  = np.zeros((self.n, 2))
+        self._reset_boundary_approx_1d()
 
         # use the above mentioned extrapolations
         y = self.y[:, bw:-bw]
@@ -451,6 +462,13 @@ class Data(object):
         # Here we enforce positivity!
         self.boundary_approx[:, 0] = np.maximum(0, y[:, 0]  + 0.5 * (y[:, 1]  - y[:, 0]))
         self.boundary_approx[:, 1] = np.maximum(0, y[:, -1] - 0.5 * (y[:, -2] - y[:, -1]))
+
+
+    """ We just have to set the values to zero """
+    def _reset_boundary_approx_1d(self):
+        self.boundary_approx    = np.zeros((self.n, 2))
+        self.taxis_bd_aprx      = np.zeros((self.n, 2))
+        self.diffusion_bd_aprx  = np.zeros((self.n, 2))
 
 
     """ compute boundary approximations for dirichlet conditions in 1d """
