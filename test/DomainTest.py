@@ -19,10 +19,9 @@ class DomainTest(unittest.TestCase):
         self.assertEqual(interval.cellsPerUnitLength,  2**6)
         self.assertEqual(interval.M,  2**6)
         self.assertEqual(interval.h,  1./2**6)
-        self.assertTrue(isinstance(interval.N, np.int))
+        self.assertTrue(isinstance(interval.N, np.ndarray))
         self.assertTrue(isinstance(interval.M, np.int))
         self.assertTrue(isinstance(interval.n, np.int))
-        self.assertTrue(isinstance(interval.cellsPerUnitLength, np.int))
 
 
     def test_interval_xs(self):
@@ -36,8 +35,28 @@ class DomainTest(unittest.TestCase):
         self.assertEqual(np.max(xs), 1.)
 
 
+    def test_interval_patches(self):
+        a = 0.
+        b = 2.
+        nPL = 2**6
+        L   = np.abs(b-a)
+        Nex = int(nPL * L)
+
+        for nop in np.arange(1, 10, 1):
+            interval = Interval(a=a, b=b, nop=nop)
+            self.assertEqual(interval.x0, a)
+            self.assertEqual(interval.xf, b)
+            self.assertLessEqual(Nex, np.sum(interval.N))
+            self.assertEqual(np.sum(interval.N), int(interval.L * interval.cellsPerUnitLength))
+
+            # now check that dX is set correctly
+            Nactual = np.sum(interval.N)
+
+            hexp = L / Nactual
+            for i in range(nop):
+                self.assertAlmostEqual(interval.dX[i], hexp)
+
+
 if __name__ == '__main__':
     unittest.main()
-
-
 

@@ -248,4 +248,18 @@ def get_function_signatures(function_arr):
     return sigs
 
 
+""" Compute the smallest divisor of the integer n """
+def smallest_divisor(n):
+    n = int(n)
+    if n % 2 == 0:
+        return 2
+
+    k = 3
+    while k * k <= n:
+        if n % k:
+            return k
+
+        k += 2
+
+    return n
 

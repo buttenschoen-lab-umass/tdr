@@ -121,6 +121,7 @@ class Grid(object):
         nop = domain.nop
         N   = domain.N
         x0  = domain.x0s
+        xf  = domain.xfs
         ngb = domain.bds
         dX  = domain.dX
 
@@ -130,8 +131,9 @@ class Grid(object):
             dX_i = expand_dims(dX[i], self.dim)
             N_i  = expand_dims(N[i],  self.dim)
             x0_i = expand_dims(x0[i], self.dim)
+            xf_i = expand_dims(xf[i], self.dim)
 
-            patch = Patch(n=self.n, start=offset, x0=x0_i, dX=dX_i, N=N_i,
+            patch = Patch(n=self.n, start=offset, x0=x0_i, xf=xf_i, dX=dX_i, N=N_i,
                           patchId=i+1, ngb=ngb[i], boundaryWidth=self.boundaryWidth,
                           nonLocal=nonLocal, *args, **kwargs)
 

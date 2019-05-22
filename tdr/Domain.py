@@ -36,7 +36,7 @@ class Interval(SimulationObject):
         self.endPoints          = np.expand_dims(np.array([a, b]), axis=0)
 
         # number of patches -> in 1D always one
-        self.nop                = kwargs.pop('nop', 1)
+        self.nop                = int(kwargs.pop('nop', 1))
 
         # check if we have a xml node
         xml = kwargs.pop('xml', None)
@@ -160,7 +160,19 @@ class Interval(SimulationObject):
             self.cellsPerUnitLength = self.N / self.L
             assert self.N == np.int(self.L * self.cellsPerUnitLength), ''
         else:
-            self.N = np.tile(np.int(self.L_part * self.cellsPerUnitLength), self.nop)
+            # in the case that we have patches -> we must have that each patch
+            # has an equal number of sub-divisions. To ensure this we simply
+            # increases N per patch until it's divisible by the number of
+            # patches.
+            requested_N_patch = np.int(self.L * self.cellsPerUnitLength)
+
+            while requested_N_patch % self.nop != 0:
+                requested_N_patch += 1
+            self.N = np.tile(np.int(requested_N_patch / self.nop), self.nop)
+
+            # must update cellsPerUnitLength!
+            self.cellsPerUnitLength = requested_N_patch / self.L
+
 
         self.h                  = 1. / self.cellsPerUnitLength
         self.dX                 = np.tile(self.h, self.nop)

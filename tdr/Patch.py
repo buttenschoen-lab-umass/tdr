@@ -56,6 +56,7 @@ class Patch(object):
     """
     def __init__(self, *args, **kwargs):
         self.x0     = kwargs.pop('x0')
+        self.xf     = kwargs.pop('xf', None)
         self.N      = np.asarray(kwargs.get('N'), np.int)
         self.dim    = self.N.size
         self.ngb    = kwargs.pop('ngb', DomainBoundary(self.dim))
@@ -74,7 +75,10 @@ class Patch(object):
 
         # uses information only saved in data
         self.shape  = self.N * self.dX
-        self.xf     = self.x0 + self.shape
+
+        # if xf is not set guess
+        if self.xf is None:
+            self.xf     = self.x0 + self.shape
 
         # Print status
         print('Creating patch(%d) with lower corner %s and upper corner %s.' %
