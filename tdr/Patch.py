@@ -170,7 +170,7 @@ class Patch(object):
         self.data = Data(ngb=self.ngb, *args, **kwargs)
 
         # now we can set the end
-        self.data.pe = self.ps + self.memory_size()
+        self.data.pe = self.ps + self.size()
 
         # build cell centers
         self._setup_cell_centers()

@@ -43,6 +43,11 @@ class Grid(object):
         return self.patches
 
 
+    @property
+    def dy(self):
+        return self.reshape(self.ydot)
+
+
     def __repr__(self):
         return 'Grid(n = %d; dim = %d; patches = %d; bw = %d)' % \
                 (self.n, self.dim, len(self.patches), self.boundaryWidth)
@@ -138,7 +143,7 @@ class Grid(object):
                           nonLocal=nonLocal, *args, **kwargs)
 
             # define locations of a patch in the general y - vector
-            offset += patch.memory_size()
+            offset += patch.size()
 
             # save patch
             self.patches.append(patch)
@@ -146,8 +151,14 @@ class Grid(object):
 
     """ Give each patch access to its component of the ydot vector """
     def _assign_memory_patches(self):
+        ydot = self.reshape(self.ydot)
         for patch in self.patches:
-            patch.set_ydot(self.ydot[patch.ps:patch.pe].reshape((self.n, patch.size())))
+            patch.set_ydot(ydot[:, patch.ps:patch.pe])
+
+
+    """ reshape a 1D-vector to the correct 2D-shape """
+    def reshape(self, y):
+        return y.reshape((self.n, self.gridsize))
 
 
     """ Compute the Grids physical size and memory size """
@@ -161,8 +172,12 @@ class Grid(object):
 
     """ Computes the centers for the whole grid """
     def _compute_cellCenter(self):
+        # TODO: generalize to 2D again!
         self.cellCentreMatrix = np.zeros((self.gridsize, self.dim))
 
+        offset = 0
         for patch in self.patches:
-            self.cellCentreMatrix[patch.ps:patch.pe, :] = patch.cellCenters()
+            N = patch.N[0]
+            self.cellCentreMatrix[offset:offset+N, :] = patch.cellCenters()
+            offset += N
 
