@@ -35,12 +35,7 @@ class DilutionFlux(Flux):
         # Compute reaction term for each of the PDEs
         # It seems easier to do this all at once, since these things may depend
         # on each other.
-        #print('\tr_dot_over_r:', patch.data.r_dot_over_r, ' Hd:', \
-        #      patch.data.r_dot_over_r * np.max(patch.data.y[:, patch.bW:-patch.bW]),
-        #      ' ',
-        #      patch.data.r_dot_over_r * np.min(patch.data.y[:, patch.bW:-patch.bW]))
-
-        Hd = patch.data.y[:, patch.bW:-patch.bW] * patch.data.r_dot_over_r
+        Hd = patch.data.y[:, patch.bw:-patch.bw] * patch.data.r_dot_over_r
 
         # cut of the boundary width
         patch.data.ydot -= Hd
