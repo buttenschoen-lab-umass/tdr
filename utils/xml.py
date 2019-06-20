@@ -43,6 +43,9 @@ def isTime(xmlNode):
     return hasName(xmlNode, 'Time')
 
 
+def isPlotter(xmlNode):
+    return hasName(xmlNode, 'Plotter')
+
 def isDomain(xmlNode):
     return hasName(xmlNode, 'Interval')
 
