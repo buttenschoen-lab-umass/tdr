@@ -73,9 +73,6 @@ class Patch(object):
         # setup
         self._setup(*args, **kwargs)
 
-        # uses information only saved in data
-        self.shape  = self.N * self.dX
-
         # if xf is not set guess
         if self.xf is None:
             self.xf     = self.x0 + self.shape
@@ -164,9 +161,8 @@ class Patch(object):
     """ Setup internal data structures! """
     def _setup(self, *args, **kwargs):
         nonLocal = kwargs.pop('nonLocal', False)
-        if nonLocal:
-            self._setup_nonlocal(*args, **kwargs)
 
+        # construct the data object of the patch
         self.data = Data(ngb=self.ngb, *args, **kwargs)
 
         # now we can set the end
@@ -174,6 +170,13 @@ class Patch(object):
 
         # build cell centers
         self._setup_cell_centers()
+
+        # uses information only saved in data
+        self.shape  = self.N * self.dX
+
+        # if we have a non-local simulation construct non-local operator
+        if nonLocal:
+            self._setup_nonlocal(*args, **kwargs)
 
 
     """ Creates patch center coordinates - centered around the origin """
