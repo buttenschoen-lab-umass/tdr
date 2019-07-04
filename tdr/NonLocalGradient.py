@@ -76,10 +76,19 @@ class NonLocalGradient:
         # Known integration kernels
         self.__integration_kernels__ = {'uniform' : self._uniform_integration_kernel,
                                         'exponential' : self._exponential_integration_kernel,
-                                        'peak' : self._peak_integration_kernel}
+                                        'peak' : self._peak_integration_kernel,
+                                        'double-peak' : self._double_peak_integration_kernel}
         # integration kernel
         int_mode = kwargs.pop('kernel', 'uniform')
         self.xi  = kwargs.pop('xi', 0.5)
+
+        # some more possible parameters
+        self.a1  = kwargs.pop('a1', 0)
+        self.a2  = kwargs.pop('a2', 1)
+        self.r1  = kwargs.pop('r1', 0.25)
+        self.r2  = kwargs.pop('r2', 0.75)
+        self.eps = kwargs.pop('eps', 0.01)
+
         assert int_mode in self.__integration_kernels__.keys(), 'Unknown integration kernel %s.' % int_mode
         print('NonLocalGradient kernel %s chosen with xi = %.2f.' % (int_mode, self.xi))
         self.get_integration_kernels = self.__integration_kernels__[int_mode]
@@ -235,6 +244,20 @@ class NonLocalGradient:
         omega0 = 1./(2. * self.xi * (1. - np.exp(-self.R**2/(2. * self.xi**2))))
         OmegaM = lambda r : -omega0 * (np.abs(r) / self.xi) * (np.abs(r) <= self.R) * np.exp(-0.5 * (np.abs(r)/self.xi)**2)
         OmegaP = lambda r :  omega0 * (np.abs(r) / self.xi) * (np.abs(r) <= self.R) * np.exp(-0.5 * (np.abs(r)/self.xi)**2)
+        return OmegaM, OmegaP
+
+
+    def _double_peak_integration_kernel(self):
+        """ double peak integration kernel """
+        delta  = lambda x, mu : (1. / np.sqrt(2. * np.pi * self.eps**2)) * np.exp(-(x - mu)**2 / (2. * self.eps**2))
+        omega  = lambda r : self.a1 * delta(r, self.r1) + self.a2 * delta(r, self.r2)
+
+        # integration domain
+        rs = np.linspace(0, 1, self.NR)
+        omega0 = 0.5 / np.trapz(omega(rs), rs)
+
+        OmegaM = lambda r : -omega0 * (np.abs(r) <= self.R) * omega(np.abs(r))
+        OmegaP = lambda r :  omega0 * (np.abs(r) <= self.R) * omega(np.abs(r))
         return OmegaM, OmegaP
 
 
