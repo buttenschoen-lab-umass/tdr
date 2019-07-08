@@ -321,8 +321,6 @@ class Data(object):
         self.r                  = self.deformation(t, y)
         self.dr                 = self.deformation_dt(t, y)
 
-        assert self.r > 0., 'Domain scaling factor cannot be non-positive!'
-
         # can't approximate dr/dt by a finite difference since the rowmap
         # solver will call these out of sequence.
         # self.r_dot_over_r       = (1. - self.r_previous / self.r) / self.dt
