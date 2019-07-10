@@ -121,7 +121,12 @@ class Patch(object):
 
     """ Computes the centers of the small volumes in the domain """
     def cellCenters(self):
-        return self.x0 + cartesian(self.xc)
+        # compute cartesian combinations of cell-centers
+        cart = self.x0 + cartesian(self.xc)
+
+        # reshape to fit patch dimensions
+        nshape = tuple(self.N) + (len(self.xc),)
+        return cart.reshape(nshape)
 
 
     """ The integer shape of the patch """
@@ -182,6 +187,7 @@ class Patch(object):
     """ Creates patch center coordinates - centered around the origin """
     def _setup_cell_centers(self):
         xcs = []
+
         for i in range(self.N.size):
             xcs.append((np.arange(1, self.N[i] + 1, 1) - 0.5) * self.dX[i])
 

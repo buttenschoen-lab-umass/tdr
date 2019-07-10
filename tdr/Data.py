@@ -154,6 +154,11 @@ class Data(object):
         return np.prod(self.N)
 
 
+    """ Grid size """
+    def grid_size(self):
+        return self.N
+
+
     """ The size required to store the PDEs on the patch in memory """
     def memory_size(self):
         return self.size() * self.n
@@ -259,7 +264,8 @@ class Data(object):
 
     """ Boundary Helper 2D """
     def _setup_bd_2d(self):
-        assert False, 'Not implemented!'
+        pass
+        #assert False, 'Not implemented!'
 
 
     """ setup deformation """

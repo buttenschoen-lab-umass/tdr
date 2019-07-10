@@ -132,7 +132,6 @@ class Grid(object):
 
         offset = 0
         for i in range(nop):
-            # FIXME - make sure the dimensions are correct
             dX_i = expand_dims(dX[i], self.dim)
             N_i  = expand_dims(N[i],  self.dim)
             x0_i = expand_dims(x0[i], self.dim)
@@ -163,17 +162,19 @@ class Grid(object):
 
     """ Compute the Grids physical size and memory size """
     def _compute_size(self):
+        self.domsize  = np.zeros(self.dim).astype(np.int)
         self.gridsize = 0
         self.molsize  = 0
         for patch in self.patches:
             self.gridsize += patch.size()
+            self.domsize  += patch.grid_size()
             self.molsize  += patch.memory_size()
 
 
     """ Computes the centers for the whole grid """
     def _compute_cellCenter(self):
-        # TODO: generalize to 2D again!
-        self.cellCentreMatrix = np.zeros((self.gridsize, self.dim))
+        nshape = tuple(self.domsize) + (self.dim,)
+        self.cellCentreMatrix = np.zeros(nshape)
 
         offset = 0
         for patch in self.patches:
