@@ -7,12 +7,13 @@ import numpy as np
 
 from tdr.Grid import Grid
 from tdr.Domain import Interval
+from tdr.Domain import Square
 from utils.utils import array_ptr
 
 
 class GridTest(unittest.TestCase):
 
-    def test_grid_construction(self):
+    def test_grid_construction_interval(self):
         # test parameters
         n_eqns = 1
         nop    = 1
@@ -24,6 +25,30 @@ class GridTest(unittest.TestCase):
         grid = Grid(n_eqns, dom, bw=bw)
 
         self.assertEqual(len(grid.patches), nop)
+
+        for i, patch in enumerate(grid.patches):
+            self.assertEqual(patch.dim, 1)
+
+
+    def test_grid_construction_square(self):
+        # test parameters
+        n_eqns = 1
+        nop    = 1
+        a      = -1
+        b      = 1
+        c      = 1
+        d      = 2
+        bw     = 2
+
+        dom  = Square(a, b, c, d, nop=nop)
+        grid = Grid(n_eqns, dom, bw=bw)
+
+        self.assertEqual(len(grid.patches), nop)
+
+        for i, patch in enumerate(grid.patches):
+            self.assertEqual(patch.dim, 2)
+            self.assertEqual(patch.N.size, 2)
+            self.assertEqual(patch.dX.size, 2)
 
 
     def test_grid_construction_patches(self):
