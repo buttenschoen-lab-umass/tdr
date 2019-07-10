@@ -76,11 +76,21 @@ class SquareTest(unittest.TestCase):
         self.assertTrue(isinstance(square.N, np.ndarray))
         self.assertTrue(isinstance(square.M, np.int))
         self.assertTrue(isinstance(square.n, np.int))
+
+        self.assertTrue(np.all(square.x0s == np.array([0,0])))
+        self.assertTrue(np.all(square.xfs == np.array([1,1])))
         self.assertEqual(len(square.N.shape), 2)
+        self.assertEqual(len(square.dX.shape), 2)
+        self.assertEqual(len(square.x0s.shape), 2)
+        self.assertEqual(len(square.xfs.shape), 2)
 
 
     def test_square_xs(self):
         square = Square(a = 0., b = 1., c = 1., d = 2.)
+
+        self.assertTrue(np.all(square.x0s == np.array([0,1])))
+        self.assertTrue(np.all(square.xfs == np.array([1,2])))
+
         x  = square.x
         self.assertEqual(np.min(x), 0.)
         self.assertEqual(np.max(x), 1.)
