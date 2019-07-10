@@ -70,21 +70,21 @@ class Interval(SimulationObject):
     def x0(self):
         return np.min(self.endPoints[:, 0])
 
-
     @property
     def x0s(self):
         return self.endPoints[:, 0]
-
 
     @property
     def xf(self):
         return np.max(self.endPoints[:, 1])
 
-
     @property
     def xfs(self):
         return self.endPoints[:, 1]
 
+    @property
+    def dimensions(self):
+        return 1
 
     """ Creation """
     def _create_from_args(self, *args, **kwargs):
@@ -197,11 +197,6 @@ class Interval(SimulationObject):
     """ Public methods """
     def origin(self):
         return np.asarray(self.x0)
-
-
-    @property
-    def dimensions(self):
-        return 1
 
 
     def xs(self):

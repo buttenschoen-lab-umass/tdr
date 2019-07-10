@@ -37,8 +37,9 @@ class Square(object):
     def _reset(self):
         self.L          = np.array([self.xf - self.x0, self.yf - self.y0])
         self.N          = np.asarray([self.xf - self.x0, self.yf - self.y0]) * self.cellsPerUnitLength
-        self.N          = np.tile(self.N.astype(np.int), self.nop)
+        self.N          = np.expand_dims(self.N.astype(np.int), axis=0)
         self.dX         = self.h * np.ones(2)
+        self.dX         = np.expand_dims(self.dX, axis=0)
         self.bds        = self.nop * [None]
 
         # if we only have one patch -> don't do anything special
@@ -59,20 +60,17 @@ class Square(object):
         return 2
 
     @property
+    def x0s(self):
+        # assuming one patch
+        return np.array([[self.x0, self.y0]])
+
+    @property
     def x0(self):
         return np.min(self.endPoints[:, 0, :])
 
     @property
-    def x0s(self):
-        return self.endPoints[:, 0, :]
-
-    @property
     def y0(self):
         return np.min(self.endPoints[:, 1, :])
-
-    @property
-    def y0s(self):
-        return self.endPoints[:, 1, :]
 
     @property
     def xf(self):
@@ -80,21 +78,19 @@ class Square(object):
 
     @property
     def xfs(self):
-        return self.endPoints[:, 0, :]
+        return np.array([[self.xf, self.yf]])
 
     @property
     def yf(self):
         return np.max(self.endPoints[:, 1, :])
 
-    @property
-    def yfs(self):
-        return self.endPoints[:, 1, :]
-
     def xs(self):
-        return np.linspace(self.x0, self.xf, self.N[0], endpoint=True)
+        # Assuming a single patch
+        return np.linspace(self.x0, self.xf, self.N[0, 0], endpoint=True)
 
     def ys(self):
-        return np.linspace(self.y0, self.yf, self.N[1], endpoint=True)
+        # Assuming a single patch
+        return np.linspace(self.y0, self.yf, self.N[0, 1], endpoint=True)
 
     def box(self):
         return [self.x0, self.xf, self.y0, self.yf]
