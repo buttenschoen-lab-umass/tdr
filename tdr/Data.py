@@ -137,6 +137,9 @@ class Data(object):
         # helper to deal with boundary condition related updates
         self._boundary_helper   = None
 
+        # dimensions
+        self.dims = ['x', 'y', 'z']
+
         # setup
         self._setup(*args, **kwargs)
 
@@ -158,35 +161,46 @@ class Data(object):
     def grid_size(self):
         return self.N
 
+    """ Required memory size """
+    def domain_shape(self):
+        gsize = self.grid_size()
+        for d in range(self.dim):
+            # these are required for dealing with boundary conditions
+            setattr(self, 'n' + self.dims[d], gsize[d])
+
+        # compute shape for y-vector
+        yshape    = (int(self.n),)
+        ydotshape = (int(self.n),)
+        for d in range(self.dim):
+            yshape    += (gsize[d] + 2 * self.bw,)
+            ydotshape += (gsize[d],)
+
+        return yshape, ydotshape
+
 
     """ The size required to store the PDEs on the patch in memory """
     def memory_size(self):
         return self.size() * self.n
 
 
-    """ The padded domain integer length """
-    @property
-    def Nx(self):
-        return self.nx + 2 * self.bw
-
-
     """ setup """
     def _setup_data(self):
-        self.nx = self.size()
-        self.bw = self.boundaryWidth
+        self.bw     = self.boundaryWidth
+        self.dshape, self.yshape = self.domain_shape()
 
         # commonly used values for boundaries
         self.Cb  = np.arange(0, self.bw)
         self.nCb = np.arange(self.bw, 0, -1) - 1
+        self.pCb = np.arange(-self.bw, 0)
         self.mCb = np.arange(1, -self.bw+1, -1)
 
-        self.y              = np.empty((self.n, self.Nx))
+        self.y              = np.empty(self.dshape)
         self.y[:]           = np.NaN
 
 
     """ Set ydot """
     def set_ydot(self, ydot):
-        self.ydot = ydot
+        self.ydot = ydot.reshape(self.yshape)
 
 
     """ setup function """
@@ -264,8 +278,8 @@ class Data(object):
 
     """ Boundary Helper 2D """
     def _setup_bd_2d(self):
+        # TODO: currently 2D simulations always default to periodic bcs
         pass
-        #assert False, 'Not implemented!'
 
 
     """ setup deformation """
@@ -349,15 +363,9 @@ class Data(object):
 
     """ Helper for dealing with periodic boundary conditions """
     def _periodic_set_values_helper(self, y):
-        bw = self.bw
-
-        # Left boundary
-        nCb = np.arange(-bw, 0)
-        self.y[:, 0:bw] = self.y[:, nCb + self.nx + bw]
-
-        # Right boundary
-        Cb = np.arange(0, bw)
-        self.y[:, Cb + self.nx + bw] = self.y[:, bw + Cb]
+        # Deal with left and right boundary
+        self.y[:, 0:self.bw] = self.y[:, self.pCb + self.nx + self.bw]
+        self.y[:, self.Cb + self.nx + self.bw] = self.y[:, self.bw + self.Cb]
 
 
     """ Combine left + right boundary helpers for Neumann and Glueing """
@@ -531,29 +539,23 @@ class Data(object):
     def set_values_2d(self, t, y):
         # compute time-step
         self._set_timestep(t)
+        bw                  = self.bw
 
-        bw                  = self.boundaryWidth
-        nx                  = y.shape[1]
-        ny                  = y.shape[2]
-        self.y              = np.empty((self.n, nx + 2 * bw, ny + 2 * bw))
-        self.y[:]           = np.NaN
         if bw > 0:
-            self.y[:, bw:-bw, bw:-bw]   = y
+            self.y[:, bw:-bw, bw:-bw]   = y[:, self.ps:self.pe]
         else:
-            self.y[:] = y
+            self.y[:, :] = y[:, self.ps:self.pe]
 
         # reset ydot
         self.ydot.fill(0)
 
-        # let's define periodic boundary conditions by default for the begining
-        # x-boundary
-        nCb = np.arange(-bw, 0)
-        self.y[:, 0:bw, bw:-bw] = self.y[:, nCb + nx + bw, bw:-bw]
-        self.y[:, bw:-bw, 0:bw] = self.y[:, bw:-bw, nCb + nx + bw]
+        # let's define periodic boundary conditions by default for the beginning
+        self.y[:, 0:bw, bw:-bw] = self.y[:, self.pCb + self.nx + bw, bw:-bw]
+        self.y[:, bw:-bw, 0:bw] = self.y[:, bw:-bw, self.pCb + self.nx + bw]
 
-        Cb = np.arange(0, bw)
-        self.y[:, Cb + nx + bw, bw:-bw] = self.y[:, bw + Cb, bw:-bw]
-        self.y[:, bw:-bw, Cb + nx + bw] = self.y[:, bw:-bw, bw + Cb]
+        # TODO check that it's really nx here and not ny
+        self.y[:, self.Cb + self.ny + bw, bw:-bw] = self.y[:, bw + self.Cb, bw:-bw]
+        self.y[:, bw:-bw, self.Cb + self.ny + bw] = self.y[:, bw:-bw, bw + self.Cb]
 
         # Finally reset
         self._reset()
@@ -624,3 +626,4 @@ class Data(object):
     def _compute_uAvy_2d(self):
         bw = self.boundaryWidth
         self.uAvy = 0.5 * (self.y[:, bw:-bw, bw:-bw+1] + self.y[:, bw:-bw, bw-1:-bw])
+
