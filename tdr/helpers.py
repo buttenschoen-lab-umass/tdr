@@ -49,8 +49,9 @@ def asarray(obj, dtype=None):
 
 
 def expand_dims(array, dimension):
-    if array.ndim != dimension + 1:
-        return np.expand_dims(array, axis=0)
+    if dimension == 1:
+        if array.ndim != dimension + 1:
+            return np.expand_dims(array, axis=0)
 
     return array
 
@@ -155,8 +156,6 @@ def apply_along_column(functions, arr):
             outarray[row, :] = function(*rows)
 
     return outarray
-
-
 
 
 # https://stackoverflow.com/questions/1208118/using-numpy-to-build-an-array-of-all-combinations-of-two-arrays
