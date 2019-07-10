@@ -22,7 +22,11 @@ class ReactionFlux(Flux):
 
     """ setup function """
     def _setup(self):
-        assert self.dim == 1, 'Reaction Flux not implemented for dimension %d.' % self.dim
+        assert self.dim <= 2, 'Reaction Flux not implemented for dimension %d.' % self.dim
+
+        if self.dim == 2:
+            self.call = self._flux_2d_const
+            return
 
         # get signature of the functions in self.trans
         sigs = get_function_signatures(self.trans)
@@ -71,6 +75,17 @@ class ReactionFlux(Flux):
         # It seems easier to do this all at once, since these things may depend
         # on each other.
         Hr = apply_along_column(self.trans, patch.data.y[:, patch.bw:-patch.bw])
+
+        # cut of the boundary width
+        patch.data.ydot += Hr
+
+
+    """ 2D - Implementation - const with respect to space and time """
+    def _flux_2d_const(self, patch, t):
+        # Compute reaction term for each of the PDEs
+        # It seems easier to do this all at once, since these things may depend
+        # on each other.
+        Hr = apply_along_column(self.trans, patch.data.y[:, patch.bw:-patch.bw, patch.bw:-patch.bw])
 
         # cut of the boundary width
         patch.data.ydot += Hr
