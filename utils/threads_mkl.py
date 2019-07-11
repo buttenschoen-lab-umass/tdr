@@ -10,8 +10,9 @@ from ctypes.util import find_library
 # from Ubuntu repos
 mkl_root = os.environ['MKLROOT']
 
-try_paths = [mkl_root + '/lib/intel64',
-             find_library('mkl_rt')]
+try_paths = [find_library('mkl_rt')]
+if mkl_root is not None:
+    try_paths.insert(0, mkl_root + '/lib/intel64')
 
 mkl_lib = None
 for libpath in try_paths:
