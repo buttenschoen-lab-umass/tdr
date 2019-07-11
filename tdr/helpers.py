@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 # Author: Andreas Buttenschoen
 import numpy as np
+import numexpr as ne
 import itertools
+
 
 # move to utils
 def PeriodicGradient(u):
@@ -16,8 +18,13 @@ def PeriodicGradient(u):
 
 
 # the vanLeer limiter
-VanLeer     = lambda r : (r + np.abs(r)) / (1. + np.abs(r))
+# VanLeer     = lambda r : (r + np.abs(r)) / (1. + np.abs(r))
 FirstOrder  = lambda r : 0.
+
+
+""" This is about 4-times faster than using the numpy lambda """
+def VanLeer(r):
+    return ne.evaluate('(r + abs(r)) / (1. + abs(r))')
 
 
 def KorenLimiterFactory(kappa = 1. / 3):
