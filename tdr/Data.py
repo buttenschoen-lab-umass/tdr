@@ -627,3 +627,6 @@ class Data(object):
         bw = self.boundaryWidth
         self.uAvy = 0.5 * (self.y[:, bw:-bw, bw:-bw+1] + self.y[:, bw:-bw, bw-1:-bw])
 
+
+if __name__  == '__main__':
+    print('test')

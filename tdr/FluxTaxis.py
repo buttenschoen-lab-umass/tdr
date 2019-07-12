@@ -69,13 +69,13 @@ class TaxisFlux(Flux):
     def _simple_call(self, patch, t):
         # compute the flux for each of the PDEs
         # TODO: test
-        bw = patch.boundaryWidth
-        uu = np.ones_like(patch.data.y[:, bw:-bw])
+        #bw = patch.boundaryWidth
+        #uu = np.ones_like(patch.data.y[:, bw:-bw])
         #for i in range(self.n):
         #    uu -= patch.data.y[i, bw:-bw]
         #m = np.where(uu < 0.)
         #uu[m] = 0.
-        self.adh_mult = uu
+        #self.adh_mult = uu
 
         for i in range(self.n):
             # FIXME works only in 1D atm!
@@ -168,7 +168,8 @@ class TaxisFlux(Flux):
         if aij != 0.:
             self.velNonZero = True
             bw = patch.boundaryWidth
-            G  = patch.data.y[j, bw:-bw] * self.adh_mult
+            #G  = patch.data.y[j, bw:-bw] * self.adh_mult
+            G  = patch.data.y[j, bw:-bw]
             a  = patch.nonLocalGradient(G).real
             A  = np.hstack((a[-1], a))
 
