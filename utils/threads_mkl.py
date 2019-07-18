@@ -8,7 +8,7 @@ from ctypes.util import find_library
 
 # Prioritize hand-compiled OpenBLAS library over version in /usr/lib/
 # from Ubuntu repos
-mkl_root = os.environ['MKLROOT']
+mkl_root = os.environ.get('MKLROOT')
 
 try_paths = [find_library('mkl_rt')]
 if mkl_root is not None:
