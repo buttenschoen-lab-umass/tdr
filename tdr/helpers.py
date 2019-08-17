@@ -44,13 +44,13 @@ def LimiterFactory(limiter_name):
         assert False, 'Unknown limiter %s.' % limiter_name
 
 
-def asarray(obj, dtype=None):
+def asarray(obj, dtype=None, matrix=True):
     if dtype is not None:
         arr = np.asarray(obj, dtype=dtype)
     else:
         arr = np.asarray(obj)
 
-    if arr.size == 1:
+    if matrix and arr.size == 1:
         arr = arr.reshape(1, 1)
     return arr
 

@@ -53,6 +53,8 @@ class ReactionFlux(Flux):
             elif sigs['pos'] == self.trans.size + 2:
                 self.call = self._flux_1d_var21
             else:
+                assert False, 'ReactionFlux: Incorrect calling arguments for reaction!\nExpecting either %d (no spatial-temporal variations) or %d (spatio-temporal variations) but found %d!'\
+                        % (self.trans.size, self.trans.size + 2, sigs['pos'])
                 assert False, 'ReactionFlux: Should not get here!'
         else:
             assert False, 'ReactionFlux: Should not get here!'

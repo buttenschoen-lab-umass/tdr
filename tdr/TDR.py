@@ -310,7 +310,7 @@ class TDR(object):
         trans      = asarray(kwargs.pop(self.__transition__, zeros(self.size)))
         advection  = asarray(kwargs.pop(self.__advection__,  zeros(self.size)))
         Adhtrans   = asarray(kwargs.pop(self.__adhesion__,   zeros(self.size)))
-        reaction   = asarray(kwargs.pop(self.__reaction__,   np.full(self.size, None)))
+        reaction   = asarray(kwargs.pop(self.__reaction__,   np.full(self.size, None)), matrix=False)
 
         # These should be shared among all players on the domain!
         deformation = asarray(kwargs.pop('r',                       None))
