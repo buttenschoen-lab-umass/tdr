@@ -65,10 +65,7 @@ class ReactionFlux(Flux):
         # Compute reaction term for each of the PDEs
         # It seems easier to do this all at once, since these things may depend
         # on each other.
-        Hr = apply_along_column_var(self.trans, patch.data.y[:, patch.bw:-patch.bw], t, patch.xc)
-
-        # cut of the boundary width
-        patch.data.ydot += Hr
+        apply_along_column_var(self.trans, patch.data.ydot, patch.data.y[:, patch.bw:-patch.bw], t, patch.xc)
 
 
     """ 1D - Implementation - const with respect to space and time """
@@ -76,10 +73,7 @@ class ReactionFlux(Flux):
         # Compute reaction term for each of the PDEs
         # It seems easier to do this all at once, since these things may depend
         # on each other.
-        Hr = apply_along_column(self.trans, patch.data.y[:, patch.bw:-patch.bw])
-
-        # cut of the boundary width
-        patch.data.ydot += Hr
+        apply_along_column(self.trans, patch.data.ydot, patch.data.y[:, patch.bw:-patch.bw])
 
 
     """ 2D - Implementation - const with respect to space and time """

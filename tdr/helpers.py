@@ -92,7 +92,7 @@ def offdiagonal(arr):
     return rarr
 
 
-def apply_along_column_var(functions, arr, t, x):
+def apply_along_column_var(functions, darr, arr, t, x):
     """
     Apply a 1D-array to functions column wise to data in arr
 
@@ -106,30 +106,25 @@ def apply_along_column_var(functions, arr, t, x):
 
     Returns
     -------
+    darr: ndarry
+        2-D array of shape of arr. With the result of function is returned in
+        row i.
+
     out : ndarray
         2-D array of shape of arr. With the result of function is returned in
         row i.
     """
-    outarray = np.empty_like(arr, arr.dtype)
-
     # create rows
-    rows = []
-    for row in range(arr.shape[0]):
-        rows.append(arr[row, :])
+    Ni = arr.shape[0]
+    rows = [arr[ii + np.s_[:,]] for ii in np.ndindex(Ni)]
 
     # apply the function row wise
-    for row in range(arr.shape[0]):
-        function = functions[row]
-        if function is None:
-            outarray[row, :] = 0
-        else:
-            outarray[row, :] = function(t, x, *rows)
-
-    return outarray
+    for row in np.ndindex(Ni):
+        darr[row, :] += functions[row](t, x, *rows)
 
 
 """ TODO Deal with this in a better way """
-def apply_along_column(functions, arr):
+def apply_along_column(functions, darr, arr):
     """
     Apply a 1D-array to functions column wise to data in arr
 
@@ -147,22 +142,13 @@ def apply_along_column(functions, arr):
         2-D array of shape of arr. With the result of function is returned in
         row i.
     """
-    outarray = np.empty_like(arr, arr.dtype)
-
-    # create rows
-    rows = []
-    for row in range(arr.shape[0]):
-        rows.append(arr[row, :])
+    #outarray = np.empty_like(arr, arr.dtype)
+    Ni = arr.shape[0]
+    rows = [arr[ii + np.s_[:,]] for ii in np.ndindex(Ni)]
 
     # apply the function row wise
-    for row in range(arr.shape[0]):
-        function = functions[row]
-        if function is None:
-            outarray[row, :] = 0
-        else:
-            outarray[row, :] = function(*rows)
-
-    return outarray
+    for row in np.ndindex(Ni):
+        darr[row, :] += functions[row](*rows)
 
 
 # https://stackoverflow.com/questions/1208118/using-numpy-to-build-an-array-of-all-combinations-of-two-arrays
