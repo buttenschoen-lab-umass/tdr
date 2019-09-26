@@ -89,6 +89,9 @@ class NonLocalGradient:
         self.r2  = kwargs.pop('r2', 0.75)
         self.eps = kwargs.pop('eps', 0.01)
 
+        # the mean of u for the neutral non-local adhesion term
+        self.ub  = kwargs.pop('ubar', 1.)
+
         assert int_mode in self.__integration_kernels__.keys(), 'Unknown integration kernel %s.' % int_mode
         print('NonLocalGradient kernel %s chosen with xi = %.2f.' % (int_mode, self.xi))
         self.get_integration_kernels = self.__integration_kernels__[int_mode]
@@ -121,6 +124,11 @@ class NonLocalGradient:
         rhs = -np.dot(self.circ, u_rhs[::-1])[:self.M]
         z[-self.M:] = rhs[::-1]
         return z
+
+
+    """ Neutral-No-flux evaluation """
+    def _eval_noflux_neutral(self, u):
+        return self._eval_noflux(u-self.ub)
 
 
     """ Weakly adhesive evaluation """
@@ -176,6 +184,10 @@ class NonLocalGradient:
             print('Computing integration weights for %s bcs.' % self.mode)
             self._init_weights_periodic()
             self._init_weights_weakly_adhesive(indices=self._get_indices_naive)
+        elif self.mode == 'neutral':
+            print('Computing integration weights for neutral no-flux bcs.')
+            self._init_weights_periodic()
+            self._init_weights_noflux()
         else:
             assert False, 'Unknown non-local gradient mode %s.' % self.mode
 
@@ -205,6 +217,11 @@ class NonLocalGradient:
             print('\tWith β = (%.4g, %.4g).' % (self.beta0, self.betaL))
             self._eval = self._eval_weakly_adhesive
             self._init_bcs_weakly_adhesive()
+        elif self.mode == 'neutral':
+            print('Using neutral no-flux non-local gradient mode:')
+            print('\tWith ubar = (%.4g).' % (self.ub))
+            self._init_bcs_noflux()
+            self._eval = self._eval_noflux_neutral
         else:
             assert False, 'Unknown non-local gradient mode %s.' % self.mode
 
