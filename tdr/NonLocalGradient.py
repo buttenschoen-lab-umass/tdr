@@ -58,7 +58,7 @@ class NonLocalGradient:
         # check that the domain is sufficiently large!
         assert 2. * self.R < self.L, 'The domain size must be twice as large as the sensing radius!'
 
-        self.NR     = max(1000, np.round(self.N2 * self.R).astype(int).flatten())
+        self.NR     = max(10, np.round(self.N2 * self.R).astype(int).flatten())
         self.hr     = 1. / self.NR
 
         self.lm     = self.M
@@ -322,7 +322,7 @@ class NonLocalGradient:
             self.weights[l1 + self.lm] += fac * Phi1x * Omegar
             self.weights[l2 + self.lm] += fac * Phi2x * Omegar
 
-        self.weights *= self.hr
+        self.weights /= self.NR
 
 
     def _init_bcs_periodic(self):
@@ -340,18 +340,18 @@ class NonLocalGradient:
         f1 = lambda x : np.piecewise(x, [x < R,     x >= R],   [lambda x : R - 2. * x, -R])
         f2 = lambda x : np.piecewise(x, [x < L - R, x >= L-R], [R, lambda x : 2. * L - R - 2. * x])
 
-        lowerIntLimit = np.floor(f1(x) / self.hr).astype(int)
-        upperIntLimit = np.floor(f2(x) / self.hr).astype(int)
+        lowerIntLimit = np.floor(f1(x) * (self.NR-1)).astype(int)
+        upperIntLimit = np.floor(f2(x) * (self.NR-1)).astype(int)
 
         idxs = None
-        if x < 0.5 * R:
+        if x <= 0.5 * R:
             idxs = np.arange(max(1, lowerIntLimit), self.NR + 1, 1)
-        elif x > L - 0.5 * R:
+        elif x >= L - 0.5 * R:
             idxs = np.arange(lowerIntLimit, upperIntLimit + 1, 1)
         else:
             idxs = np.concatenate((np.arange(lowerIntLimit, 0, 1), np.arange(1, upperIntLimit + 1, 1)))
 
-        return idxs.astype(int)
+        return idxs.astype(int), lowerIntLimit, upperIntLimit
 
 
     def _init_weights_noflux(self):
@@ -360,19 +360,23 @@ class NonLocalGradient:
 
         # get all the x indices
         x_idxs = np.arange(0, self.M, 1)
+        print('M:', self.M, ' N1:', self.N1, ' NR:', self.NR, ' h:', self.h)
         for i in x_idxs:
-            xk = (i/self.N1) * self.L
+            xk = ((i+0.5)/(self.N1-1)) * self.L
 
             # integration indices
-            idxs = self._get_indices(xk)
+            idxs, ldx, udx = self._get_indices(xk)
+
+            #print('i:', i, ' x:', xk, ' idxs:', idxs, ' N1:', self.N1)
 
             int_kernel = self._integration_kernel()
             for j in idxs:
-                r = (j/self.NR) * self.R
+                r = (j/(self.NR-1)) * self.R
                 assert r != 0., 'NonLocalGradient weights r cannot be zero!'
                 Omegar = int_kernel(r)
 
                 x = xi + 0.5 * self.h + r
+                #x = xi + r
                 # compute l1
                 l1 = np.floor((x - xi) / self.h).astype(int)
                 if self._check_guess(x, xi, l1):
@@ -388,13 +392,18 @@ class NonLocalGradient:
                 Phi1x = 1. - np.abs(x - xi - l1 * self.h) / self.h
                 Phi2x = 1. - np.abs(x - xi - l2 * self.h) / self.h
 
-                fac = 0.5 if np.abs(j) == self.NR else 1.
+                #fac = 0.5 if (abs(j) == self.NR) else 1.
+                #fac = 0.5 if (j == idxs[0] or j == idxs[-1]) else 1.
+                fac = 0.5 if (j == ldx or j == udx) else 1.
+
+                if j == ldx or j == udx:
+                    print('xk:', xk, ' r:', r,  ' j:', j, ' ldx:', ldx, ' udx:', udx,  ' l1:', l1, ' l2:', l2, ' NR:', self.NR)
 
                 #print('x:', xk,' r:', r,' Omegar:', Omegar)
                 self.weights_bc[i, l1 + self.lm] += fac * Phi1x * Omegar
                 self.weights_bc[i, l2 + self.lm] += fac * Phi2x * Omegar
 
-        self.weights_bc *= self.hr
+        self.weights_bc /= (self.NR-1)
 
 
     def _init_bcs_noflux(self):
@@ -479,7 +488,7 @@ class NonLocalGradient:
                 self.weights_bc[i, l1 + self.lm] += fac * Phi1x * Omegar
                 self.weights_bc[i, l2 + self.lm] += fac * Phi2x * Omegar
 
-        self.weights_bc *= self.hr
+        self.weights_bc /= self.NR
 
 
     def _init_bcs_weakly_adhesive(self):
