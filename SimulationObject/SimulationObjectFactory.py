@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Author: Andreas Buttenschoen
-from __future__ import generators, print_function
+from __future__ import generators, print_function, absolute_import
 
 # NEED THESE!!
 from .SimulationObject import SimulationObject
