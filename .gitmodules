@@ -1,0 +1,3 @@
+[submodule "rowmap"]
+	path = rowmap
+	url = git@github.com:adrs0049/rowmap.git
