@@ -94,4 +94,15 @@ for dir in $(ls details/); do [[ -d details/$dir ]] && ln -s details/$dir $dir ;
 
 
 
+### Setting Python path
+
+The `PYTHONPATH` variable needs to be set correctly so that the python
+interpreter finds all the required files. This can be done via the included
+`.bashrc` file.
+
+```
+source .bashrc
+```
+
+
 
