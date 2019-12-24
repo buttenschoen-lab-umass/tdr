@@ -34,7 +34,7 @@ For more detailed documentation refer to the header of MOL.py, TDR.py, Data.py.
 We start by creating a domain.
 ```
 
-    bc = DomainBoundary(left=, right=)
+    bc = DomainBoundary(left=Periodic(), right=Periodic())
 
     # The interval will have 2**n divisions per unit length.
     n = 10
@@ -42,8 +42,10 @@ We start by creating a domain.
 ```
 Next we setup the transition matrices, the diagonal elements of trans define
 the diffusion coefficients, while the off-diagonal elements define the taxis
-strength coefficients. The elements of AdhTrans define the adhesion
-coefficients.
+strength coefficients. That means that the entry (i, i) is the diffusion
+coefficient of population i; while entry (i, j) is the taxis coefficient of
+population i with respect to gradients of population j. The elements of AdhTrans 
+define the adhesion coefficients, and work the same as the elements of trans.
 
 ```
     # transition matrices
