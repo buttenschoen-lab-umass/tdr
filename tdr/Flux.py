@@ -28,6 +28,19 @@ class Flux(object):
         return self._priority
 
 
+    """ Initialize temporaries etc. """
+    def init(self, patch):
+        pass
+
+
+    """ Helper to attach objects to self """
+    def _attach_object(self, otype, oname, *args, **kwargs):
+        if not hasattr(self, oname):
+            setattr(self, oname, otype(*args, **kwargs))
+        # else:
+        # we do nothing!
+
+
     """ Functor """
     def __call__(self, patch, t):
         self.call(patch, t)

@@ -382,6 +382,8 @@ class TDR(object):
         # print fluxes
         print('Registered fluxes:', end=' ')
         for flux in self.fluxes:
+            # some fluxes may need per patch initialization!
+            self.grid.init_flux(flux)
             print(flux, end='; ')
         print('', end='\n')
 

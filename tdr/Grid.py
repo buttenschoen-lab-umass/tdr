@@ -70,6 +70,12 @@ class Grid(object):
             patch.apply_flux(flux, t)
 
 
+    """ Some fluxes need some additional initialization """
+    def init_flux(self, flux):
+        for patch in self.patches:
+            flux.init(patch)
+
+
     def get_dx(self, patchId):
         return self.patches[patchId].dX
 

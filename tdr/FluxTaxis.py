@@ -5,7 +5,7 @@ from __future__ import print_function, division
 
 import numpy as np
 
-from tdr.helpers import VanLeer
+from tdr.helpers import VanLeer, offdiagonal
 from tdr.Flux import Flux
 
 
@@ -18,13 +18,15 @@ class TaxisFlux(Flux):
         self._finish    = None
         self._bc_call   = None
 
+        # special for the taxis flux
+        self.transAdh   = transitionMatrixAdhesion
+
         # Call parent constructor
         super(TaxisFlux, self).__init__(noPDEs, dimensions, transitionMatrix, *args, **kwargs)
 
         # extra vars for Taxis Flux
         self.velNonZero = False
         self.limiter    = VanLeer
-        self.transAdh   = transitionMatrixAdhesion
 
         # set priority
         self._priority   = 20
@@ -38,15 +40,26 @@ class TaxisFlux(Flux):
     """ Setup """
     def _setup(self):
         if self.dim == 1:
-            self._adhCall   = self._adh_flux_1d
             self._finish    = self._finish_1d
 
             if np.issubdtype(self.trans.dtype, np.number):
-                print('Constant taxis coefficient!')
-                self._taxisCall = self._flux_1d_const
+                # and check whether we really have non-zero off-diagonal elements
+                if np.any(offdiagonal(self.trans)) != 0:
+                    print('Constant taxis coefficient!')
+                    self._taxisCall = self._flux_1d_const
+                else:
+                    self._taxisCall = self._dummy_flux
             else:
                 print('Variable taxis coefficient!')
                 self._taxisCall = self._flux_1d_variable
+
+            # check for variable adhesion coefficient matrix
+            if np.issubdtype(self.transAdh.dtype, np.number):
+                print('Constant adhesion coefficient!')
+                self._adhCall = self._adh_flux_1d
+            else:
+                print('Variable adhesion coefficients!')
+                self._adhCall = self._adh_flux_nonlinear_1d
 
             # TODO: FIXME doesn't work for more than a single patch
             if self.bd.isNoFlux():
@@ -67,43 +80,61 @@ class TaxisFlux(Flux):
 
     """ Call function """
     def _simple_call(self, patch, t):
+        # make sure patch velocity is reset!
+        self._reset_velocity(patch.patchId)
+
         # compute the flux for each of the PDEs
-        # TODO: test
-        #bw = patch.boundaryWidth
-        #uu = np.ones_like(patch.data.y[:, bw:-bw])
-        #for i in range(self.n):
-        #    uu -= patch.data.y[i, bw:-bw]
-        #m = np.where(uu < 0.)
-        #uu[m] = 0.
-        #self.adh_mult = uu
-
         for i in range(self.n):
-            # FIXME works only in 1D atm!
             self.velNonZero = False
-
-            self._init_vel(patch)
-
-            # TODO!
-            #self.adh_mult = uu * self.y[i, bw:-bw]
 
             for j in range(self.n):
                 self._taxisCall(i, j, patch)
                 self._adhCall(i, j, patch)
 
+            # only call expensive taxis flux computation if we have non-zero taxis velocity.
             if self.velNonZero:
                 self._finish(i, patch)
 
 
+    """ Initialization function """
+    def init(self, patch):
+        self._init_velocity(patch)
+
+
     """ Implementation details """
-    def _init_vel(self, patch):
+    def _init_velocity(self, patch):
+        patchId = patch.patchId
         if self.dim == 1:
-            self.vij = np.zeros(1 + patch.size())
+            # make sure dictionary exists!
+            self._attach_object(dict, 'vij')
+            self.vij[patchId] = np.zeros(1 + patch.size())
+
+            # set reset function
+            self._reset_velocity = self._reset_velocity_1d
         elif self.dim == 2:
             shape = patch.get_shape()
-            self.vxij = np.zeros(shape + [1, 0])
-            self.vyij = np.zeros(shape + [0, 1])
+
+            # make sure dictionaries exist!
+            self._attach_object(dict, 'vxij')
+            self._attach_object(dict, 'vyij')
+
+            self.vxij[patchId] = np.zeros(shape + [1, 0])
+            self.vyij[patchId] = np.zeros(shape + [0, 1])
+
+            # set reset function
+            self._reset_velocity = self._reset_velocity_2d
         else:
             assert False, 'not implemented for higher dimensions!'
+
+
+    """ Fill temporaries with zeros """
+    def _reset_velocity_1d(self, patchId):
+        self.vij[patchId].fill(0)
+
+
+    def _reset_velocity_2d(self, patchId):
+        self.vxij[patchId].fill(0)
+        self.vyij[patchId].fill(0)
 
 
     """ 1D - flux approximation for constant coefficients """
@@ -112,10 +143,12 @@ class TaxisFlux(Flux):
             return
 
         pij   = self.trans[i, j]
+        vij   = self.vij[patch.patchId]
+
         if pij != 0.:
             self.velNonZero = True
             uDx = patch.data.uDx[j, :]
-            self.vij += pij * uDx
+            vij += pij * uDx
 
 
     """ 1D - flux approximation for variable coefficients
@@ -132,6 +165,8 @@ class TaxisFlux(Flux):
 
         # TODO suppose that the coefficient is constant for the moment
         pij   = self.trans[i, j]
+        vij   = self.vij[patch.patchId]
+
         if pij != 0.:
             self.velNonZero = True
 
@@ -142,7 +177,7 @@ class TaxisFlux(Flux):
             uAvx = patch.data.uAvx[j, :]
 
             # compute the velocities
-            self.vij += pij(uAvx) * uDx
+            vij += pij(uAvx) * uDx
 
 
     """ 2D - flux approximation for constant coefficients """
@@ -152,31 +187,48 @@ class TaxisFlux(Flux):
 
         # TODO suppose that the coefficient is constant for the moment
         pij   = self.trans[i, j]
+        vxij  = self.vyij[patch.patchId]
+        vyij  = self.vxij[patch.patchId]
+
         if pij != 0.:
             self.velNonZero = True
             uDx = patch.data.uDx[j, :]
             uDy = patch.data.uDy[j, :]
-            self.vxij += pij * uDx
-            self.vyij += pij * uDy
+            vxij += pij * uDx
+            vyij += pij * uDy
 
 
-    """ adhesion flux """
+    """ adhesion flux - linear case! """
     def _adh_flux_1d(self, i, j, patch):
         # check if we have an adhesion term
-        # TODO only implements depends u atm + linear function
         aij   = self.transAdh[i, j]
+        vij   = self.vij[patch.patchId]
+
         if aij != 0.:
             self.velNonZero = True
             bw = patch.boundaryWidth
-            #G  = patch.data.y[j, bw:-bw] * self.adh_mult
             G  = patch.data.y[j, bw:-bw]
             a  = patch.nonLocalGradient(G).real
-            A  = np.hstack((a[-1], a))
 
-            if np.isnan(np.sum(A)):
-                raise ValueError("Encountered NaN in non-local gradient calculation")
+            vij[-1] += aij * a[-1]
+            vij[1:] += aij * a
 
-            self.vij += aij * A
+
+    """ adhesion flux """
+    def _adh_flux_nonlinear_1d(self, i, j, patch):
+        # check if we have an adhesion term
+        aij   = self.transAdh[i, j]
+        vij   = self.vij[patch.patchId]
+
+        if aij is not None and aij != 0:
+            self.velNonZero = True
+            bw = patch.boundaryWidth
+
+            G  = aij(patch.data.uAvx[:, 1:]) * patch.data.y[j, bw:-bw]
+            a  = patch.nonLocalGradient(G).real
+
+            vij[-1] += a[-1]
+            vij[1:] += a
 
 
     """ dummy flux """
@@ -191,8 +243,9 @@ class TaxisFlux(Flux):
         For the mathematical details see A. Gerisch 2001.
     """
     def _finish_1d(self, i, patch):
-        bw = patch.boundaryWidth
-        y  = patch.data.y[i, :]
+        bw    = patch.boundaryWidth
+        y     = patch.data.y[i, :]
+        vij   = self.vij[patch.patchId]
 
         # get the current state, and the state shifted by one see (3.12)
         ui      = y[bw-1:-bw]
@@ -208,14 +261,14 @@ class TaxisFlux(Flux):
         r = fwd / (bwd - (np.abs(bwd) < 1.e-14))
 
         # approximation for positive velocities
-        taxisApprox = (ui + 0.5 * self.limiter(r) * bwd) * (self.vij>0) * self.vij
+        taxisApprox = (ui + 0.5 * self.limiter(r) * bwd) * (vij>0) * vij
 
         ## negative velocity
         ## compute smoothness monitor
         r = fwd / (fwd2 - (np.abs(fwd2) < 1.e-14))
 
         # compute approximation for negative velocities
-        taxisApprox += (ui_p1 - 0.5 * self.limiter(r) * fwd2) * (self.vij<0) * self.vij
+        taxisApprox += (ui_p1 - 0.5 * self.limiter(r) * fwd2) * (vij<0) * vij
 
         # Add any boundary modifications that are required
         self._bc_call(i, patch, taxisApprox)
@@ -244,7 +297,8 @@ class TaxisFlux(Flux):
     """
     def _noflux_bc_1d(self, i, patch, taxisApprox):
         # TODO: Deal with zero diffusion constants etc. and non-zero flux boundaries
-        taxisApprox[[0, -1]] = patch.data.get_bd_taxis(i, self.vij[[0, -1]])
+        vij = self.vij[patch.patchId]
+        taxisApprox[[0, -1]] = patch.data.get_bd_taxis(i, vij[[0, -1]])
 
 
     """ 2D implementation """
