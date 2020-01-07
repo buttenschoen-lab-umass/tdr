@@ -78,23 +78,32 @@ class NonLocalGradient:
         self.__integration_kernels__ = {'uniform' : self._uniform_integration_kernel,
                                         'exponential' : self._exponential_integration_kernel,
                                         'peak' : self._peak_integration_kernel,
-                                        'double-peak' : self._double_peak_integration_kernel}
+                                        'double-peak' : self._double_peak_integration_kernel,
+                                        'morse' : self._morse_kernel}
         # integration kernel
         int_mode = kwargs.pop('kernel', 'uniform')
         self.xi  = kwargs.pop('xi', 0.5)
 
-        # some more possible parameters
+        # TODO - move to own function - some more possible parameters
         self.a1  = kwargs.pop('a1', 0)
         self.a2  = kwargs.pop('a2', 1)
         self.r1  = kwargs.pop('r1', 0.25)
         self.r2  = kwargs.pop('r2', 0.75)
         self.eps = kwargs.pop('eps', 0.01)
 
+        # some more parameters for morse kernel
+        self.qr  = kwargs.pop('qr', 0.01)
+        self.qa  = kwargs.pop('qa', 0.08)
+        self.mr  = kwargs.pop('mr', 0.03125)
+        self.ma  = kwargs.pop('ma', 0.125)
+        self.sr  = kwargs.pop('sr', 0.25)
+        self.sa  = kwargs.pop('sa', 1.00)
+
         # the mean of u for the neutral non-local adhesion term
         self.ub  = kwargs.pop('ubar', 1.)
 
         assert int_mode in self.__integration_kernels__.keys(), 'Unknown integration kernel %s.' % int_mode
-        print('NonLocalGradient kernel %s chosen with xi = %.2f.' % (int_mode, self.xi))
+        print('NonLocalGradient kernel %s chosen with xi = %.2f; and sensing radius %.2f.' % (int_mode, self.xi, self.R))
         self.get_integration_kernels = self.__integration_kernels__[int_mode]
 
         """ Compute integration weights """
@@ -276,6 +285,16 @@ class NonLocalGradient:
 
         OmegaM = lambda r : -omega0 * (np.abs(r) <= self.R) * omega(np.abs(r))
         OmegaP = lambda r :  omega0 * (np.abs(r) <= self.R) * omega(np.abs(r))
+        return OmegaM, OmegaP
+
+
+    def _morse_kernel(self):
+        """ Morse potential integration kernel """
+        omega = lambda r : self.qa * np.exp(-(r - self.sa)**2 / (2. * self.ma**2)) / np.sqrt(2. * np.pi*self.ma**2) \
+                - self.qr * np.exp(-(r - self.sr)**2 / (2. * self.mr**2)) / np.sqrt(2. * np.pi * self.mr**2)
+
+        OmegaM = lambda r : (-1.) * (np.abs(r) <= self.R) * omega(np.abs(r))
+        OmegaP = lambda r :         (np.abs(r) <= self.R) * omega(np.abs(r))
         return OmegaM, OmegaP
 
 
