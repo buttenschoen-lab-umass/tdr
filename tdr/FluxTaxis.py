@@ -4,6 +4,7 @@
 from __future__ import print_function, division
 
 import numpy as np
+from numba import jit
 
 from tdr.helpers import VanLeer, offdiagonal
 from tdr.Flux import Flux
@@ -242,33 +243,40 @@ class TaxisFlux(Flux):
 
         For the mathematical details see A. Gerisch 2001.
     """
+
     def _finish_1d(self, i, patch):
         bw    = patch.boundaryWidth
         y     = patch.data.y[i, :]
         vij   = self.vij[patch.patchId]
 
-        # get the current state, and the state shifted by one see (3.12)
-        ui      = y[bw-1:-bw]
-        ui_p1   = y[bw:-bw+1]
+        #@jit(nopython=True, nogil=True)
+        def _finish_detail_1d(y, bw, vij, limiter):
+            # get the current state, and the state shifted by one see (3.12)
+            ui      = y[bw-1:-bw]
+            ui_p1   = y[bw:-bw+1]
 
-        # compute differences between cells
-        fwd  = ui_p1        - ui
-        bwd  = ui           - y[:-bw-1]
-        fwd2 = y[bw+1:]     - ui_p1
+            # compute differences between cells
+            fwd  = ui_p1        - ui
+            bwd  = ui           - y[:-bw-1]
+            fwd2 = y[bw+1:]     - ui_p1
 
-        # Positive velocity
-        # compute smoothness monitor
-        r = fwd / (bwd - (np.abs(bwd) < 1.e-14))
+            # Positive velocity
+            # compute smoothness monitor
+            r = fwd / (bwd - (np.abs(bwd) < 1.e-14))
 
-        # approximation for positive velocities
-        taxisApprox = (ui + 0.5 * self.limiter(r) * bwd) * (vij>0) * vij
+            # approximation for positive velocities
+            taxisApprox = (ui + 0.5 * limiter(r) * bwd) * (vij>0) * vij
 
-        ## negative velocity
-        ## compute smoothness monitor
-        r = fwd / (fwd2 - (np.abs(fwd2) < 1.e-14))
+            ## negative velocity
+            ## compute smoothness monitor
+            r = fwd / (fwd2 - (np.abs(fwd2) < 1.e-14))
 
-        # compute approximation for negative velocities
-        taxisApprox += (ui_p1 - 0.5 * self.limiter(r) * fwd2) * (vij<0) * vij
+            # compute approximation for negative velocities
+            taxisApprox += (ui_p1 - 0.5 * limiter(r) * fwd2) * (vij<0) * vij
+
+            return taxisApprox
+
+        taxisApprox = _finish_detail_1d(y, bw, vij, VanLeer)
 
         # Add any boundary modifications that are required
         self._bc_call(i, patch, taxisApprox)
@@ -377,6 +385,3 @@ if __name__ == '__main__':
 
     for i in range(0, 2):
         flux(i, 0)
-
-
-

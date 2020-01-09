@@ -6,6 +6,7 @@ from __future__ import print_function, division
 from tdr.Flux import Flux
 
 import numpy as np
+from numba import jit
 
 
 class DiffusionFlux(Flux):
@@ -58,8 +59,12 @@ class DiffusionFlux(Flux):
         pii   = self.trans[i, i]
         uDx   = patch.data.uDx[i, :]
 
-        # set ydot in data
-        patch.data.ydot[i, :] += (pii / patch.step_size()) * (uDx[1:] - uDx[:-1])
+        #@jit(nopython=True, nogil=True)
+        # this really slows things down!
+        def _flux_1d_periodic_detail(ydot, pii, h, uDx):
+            ydot += (pii / h) * (uDx[1:] - uDx[:-1])
+
+        _flux_1d_periodic_detail(patch.data.ydot[i, :], pii, patch.step_size(), uDx)
 
 
     """ Compute the diffusion flux approximation i.e. H_D when imposing no-flux
@@ -96,4 +101,3 @@ class DiffusionFlux(Flux):
 
         # set ydot in data
         patch.data.ydot[i, :, :] += xdiff + ydiff
-

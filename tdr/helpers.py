@@ -5,6 +5,9 @@ import numpy as np
 import numexpr as ne
 import itertools
 
+import numba
+from numba import jit
+
 
 # move to utils
 def PeriodicGradient(u):
@@ -23,8 +26,10 @@ FirstOrder  = lambda r : 0.
 
 
 """ This is about 4-times faster than using the numpy lambda """
+@jit(nopython=True, nogil=True)
 def VanLeer(r):
-    return ne.evaluate('(r + abs(r)) / (1. + abs(r))')
+    return (r + np.abs(r)) / (1. + np.abs(r))
+    #return ne.evaluate('(r + abs(r)) / (1. + abs(r))')
 
 
 def KorenLimiterFactory(kappa = 1. / 3):
@@ -254,4 +259,3 @@ def smallest_divisor(n):
         k += 2
 
     return n
-
