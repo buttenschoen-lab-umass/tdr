@@ -6,6 +6,8 @@ from __future__ import print_function, division
 import os, sys
 from datetime import datetime
 import numpy as np
+import numba
+from numba import jit
 
 # append system path
 sys.path.append('/home/adrs0061/sources/NumericalPDEs')
@@ -25,11 +27,9 @@ datapath = os.path.join(basepath, 'results', 'adhesion-calcium', basename)
 if not os.path.exists(datapath):
     os.makedirs(datapath)
 
-# save startime
-startTime = datetime.now()
 
 L = 120
-n = 6
+n = 7
 
 bd       = DomainBoundary(left=Periodic(), right=Periodic())
 interval = Interval(0, L, n=n, bd=bd)
@@ -61,13 +61,14 @@ s_star = 1.0
 a1     = 0.5
 a2     = 0.5
 Rs     = 5.0
+s_star = s_star / Rs
 
 # This function is a ToDO!
+@jit(nopython=True, parallel=True)
 def S(y):
     c = y[0, :]
     # h = y[1, :]
     # u = y[2, :]
-    #print('c:', c)
     ret = s_star * (1. - a1 * c / (a2 + c))
     return ret.reshape((1, ret.size))
 
@@ -88,12 +89,25 @@ r2    = 1.6
 r3    = 4.0
 mu    = 0.3
 
+# let's try numba for the reaction terms
+@jit(nopython=True, nogil=True)
+def rxn1(c, h, u):
+    return mu * K1 * h * (b + c) / (1. + c) - Gamma * c / (K + c)
+
+@jit(nopython=True, nogil=True)
+def rxn2(c, h, u):
+    return K2**2 / (K2**2 + c**2) - h
+
+@jit(nopython=True, nogil=True)
+def rxn3(c, h, u):
+    return r1 * u * (1. - u) * (1. + r2 * c**2 / (r3 + c**2))
+
 # for c(x, t)
-R[0] = lambda c, h, u : mu * K1 * h * (b + c) / (1 + c)
+R[0] = rxn1
 # h(x, t)
-R[1] = lambda c, h, u : K2**2 / (K2**2 + c**2) - h
+R[1] = rxn2
 # u(x, t)
-R[2] = lambda c, h, u : r1 * u * (1 - u) * (1 + r2 * c**2 / (r3 + c**2))
+R[2] = rxn3
 
 # assemble initial condition
 x  = interval.xs()
@@ -109,19 +123,24 @@ y0[1, :] = 1. / (1. + css**2)
 y0[2, :] = np.exp(-0.25 * (x - 0.5 * L)**2)
 
 # simulation time control
-time = Time(t0 = 0, tf = 5, dt = 0.1)
+time = Time(t0 = 0, tf = 250, dt = 1.)
 
-# finally setup the solver
-solver = MOL(TDR, y0, domain=interval, transitionMatrix=trans, int_mode='morse',
-             AdhesionTransitionMatrix=adhTrans, reactionTerms=R,
-             time=time, verbose=True, R=Rs)
 
-# save runtime start
-runTimeStart = datetime.now()
+if __name__ == '__main__':
+    # save startime
+    startTime = datetime.now()
 
-solver.run()
+    # finally setup the solver
+    solver = MOL(TDR, y0, domain=interval, transitionMatrix=trans, int_mode='morse',
+                 AdhesionTransitionMatrix=adhTrans, reactionTerms=R,
+                 outdir=datapath, name=basename,
+                 time=time, verbose=True, save_new=True, R=Rs)
 
-print('\nSimulation completed!')
-print('Execution time  :', datetime.now() - startTime)
-print('Simulation time :', datetime.now() - runTimeStart)
+    # save runtime start
+    runTimeStart = datetime.now()
 
+    solver.run()
+
+    print('\nSimulation completed!')
+    print('Execution time  :', datetime.now() - startTime)
+    print('Simulation time :', datetime.now() - runTimeStart)
