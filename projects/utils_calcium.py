@@ -199,9 +199,6 @@ class Parameters(dict):
         self.vars = vars
         self.rhs  = rhs
 
-        # non-local adhesion parameters
-        self.s_star = self.s_star / self.Rs
-
     @property
     def trans(self, n = 2):
         """ Assemble diffusion matrix """

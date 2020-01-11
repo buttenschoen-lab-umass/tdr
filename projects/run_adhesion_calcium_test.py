@@ -121,8 +121,7 @@ def movie(datafile, pars, vars):
 
 if __name__ == '__main__':
     # run this for a few different mus
-    # mus = np.asarray([0.2, 0.288, 0.3, 0.35, 0.4, 0.45, 0.5, 0.6])
-    mus = np.asarray([0.3, 0.35, 0.4, 0.45, 0.5, 0.6])
+    mus = np.asarray([0.2, 0.288, 0.3, 0.35, 0.4, 0.45, 0.5, 0.6])
 
     # define the simulations variables
     vars = {0 : 'c', 1 : 'h'}

@@ -143,5 +143,3 @@ def run_simulations_mp(alphas, L, tf, datapath, basename, ns, *args, **kwargs):
     pool.join()
 
     return data
-
-

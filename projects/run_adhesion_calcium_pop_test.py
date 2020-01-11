@@ -41,7 +41,7 @@ from vis.adhesion_new import create_animation
 from vis.animation import display_animation, save_animation
 
 # setup simulation specific paths!
-basename ='AdhesionCalcium-Population-Test'
+basename ='AdhesionCalcium-Population-New-3-Test'
 datapath = os.path.join(basepath, 'results', 'adhesion-calcium', basename)
 
 # make sure path we will use exists!
