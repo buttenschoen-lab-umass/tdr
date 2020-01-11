@@ -247,6 +247,11 @@ class NonLocalGradient:
     def _integration_kernel(self):
         OmegaM, OmegaP = self.get_integration_kernels()
         int_kernel = lambda r : np.piecewise(r, [r < 0., r > 0.], [lambda r : OmegaM(r), lambda r : OmegaP(r)])
+
+        # let's check whether we integrate to one!
+        rs = np.linspace(-self.R, self.R, 2*self.NR+1)
+        assert np.abs(np.trapz(int_kernel(rs), rs) - 1.) < 1e-3, 'Non-local kernel does not integrate to 1.0!'
+
         return int_kernel
 
 
@@ -290,11 +295,21 @@ class NonLocalGradient:
 
     def _morse_kernel(self):
         """ Morse potential integration kernel """
+        print('Using Morse kernel with q[r, a] = %.2f, %.2f; m[r, a] = %.2f, %.2f; s[r, a] = %.2f, %.2f.' % (self.qr, self.qa, self.mr, self.ma, self.sr, self.sa))
         omega = lambda r : self.qa * np.exp(-(r - self.sa)**2 / (2. * self.ma**2)) / np.sqrt(2. * np.pi*self.ma**2) \
                 - self.qr * np.exp(-(r - self.sr)**2 / (2. * self.mr**2)) / np.sqrt(2. * np.pi * self.mr**2)
 
-        OmegaM = lambda r : (-1.) * (np.abs(r) <= self.R) * omega(np.abs(r))
-        OmegaP = lambda r :         (np.abs(r) <= self.R) * omega(np.abs(r))
+        # integration domain
+        rs = np.linspace(0, self.R, self.NR)
+        io = np.trapz(omega(rs), rs)
+        # let's only normalize when we have a non-zero integration kernel
+        if np.abs(io) > 1e-3:
+            omega0 = 0.5 / io
+        else:
+            omega0 = 1.0
+
+        OmegaM = lambda r : (-omega0 / self.R) * (np.abs(r) <= self.R) * omega(np.abs(r))
+        OmegaP = lambda r : ( omega0 / self.R) * (np.abs(r) <= self.R) * omega(np.abs(r))
         return OmegaM, OmegaP
 
 
@@ -552,4 +567,3 @@ class NonLocalGradient:
 
         assert self.correction_lhs.size == self.M, 'Size of correction is incorrect!'
         assert self.correction_rhs.size == self.M, 'Size of correction is incorrect!'
-
