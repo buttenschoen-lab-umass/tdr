@@ -21,7 +21,7 @@ from model.Time import Time
 
 homedir  = os.path.expanduser('~')
 basepath = os.path.join(homedir,  'sources', 'NumericalPDEs')
-basename ='AdhesionCalcium'
+basename ='AdhesionCalcium-4'
 datapath = os.path.join(basepath, 'results', 'adhesion-calcium', basename)
 
 if not os.path.exists(datapath):
@@ -123,7 +123,11 @@ y0[1, :] = 1. / (1. + css**2)
 y0[2, :] = np.exp(-0.25 * (x - 0.5 * L)**2)
 
 # simulation time control
-time = Time(t0 = 0, tf = 250, dt = 1.)
+time = Time(t0 = 0, tf = 500, dt = 0.2)
+
+# non-local operator properties
+qr = 0.01
+qa = 0.33
 
 
 if __name__ == '__main__':
@@ -133,7 +137,7 @@ if __name__ == '__main__':
     # finally setup the solver
     solver = MOL(TDR, y0, domain=interval, transitionMatrix=trans, int_mode='morse',
                  AdhesionTransitionMatrix=adhTrans, reactionTerms=R,
-                 outdir=datapath, name=basename,
+                 outdir=datapath, name=basename, qa=qa, qr=qr,
                  time=time, verbose=True, save_new=True, R=Rs)
 
     # save runtime start
